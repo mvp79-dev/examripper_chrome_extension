@@ -5,8 +5,8 @@ window.addEventListener('load', function () {
 
 window.addEventListener('message', function (event) {
   if (event.origin === 'https://examripper-288287396080.herokuapp.com') {
-    console.log('Auth token', event.data.content.message.authToken);
-    console.log('donr status', event.data.content.message.is_active_patron);
+    console.log('auth token:', event.data.content.message.authToken);
+    console.log('donor status:', event.data.content.message.is_active_patron);
     // Save data to local storage
     chrome.storage.local.set(
       {

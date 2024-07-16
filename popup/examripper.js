@@ -1,45 +1,85 @@
-console.log('hello');
+console.log('examripper.js loaded');
 
-const buttons = document.querySelectorAll('button');
+const intervalSlider = /** @type{HTMLInputElement} */ (document.getElementById('action-interval-slider'));
+const sliderCurrentValue = /** @type{HTMLSpanElement} */ (document.getElementById('current-value'));
+const actionButton = /** @type{HTMLButtonElement} */ (document.getElementById('action-button'));
 
-// Add event listeners to buttons with "start" in their inner text
-buttons.forEach((button) => {
-  if (button.innerText.toLowerCase().includes('start')) {
-    button.addEventListener('click', function () {
-      if (button.classList.contains('start-button')) {
-        console.log('start');
-        button.classList.remove('start-button');
-        button.classList.add('stop-button');
-        button.innerText = 'Stop';
-        const interval = document.getElementById('current-value').innerText;
+try {
+  if (!(intervalSlider instanceof HTMLInputElement)) throw 'intervalSlider not HTMLInputElement';
+  if (!(sliderCurrentValue instanceof HTMLSpanElement)) throw 'sliderCurrentValue not HTMLSpanElement';
+  if (!(actionButton instanceof HTMLButtonElement)) throw 'startButton not HTMLButtonElement';
 
-        // Send message to extension to start highlighting
-        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-          chrome.tabs.sendMessage(tabs[0].id, { action: 'startHighlighting', interval: parseFloat(interval) * 1000 });
-        });
-      } else if (button.classList.contains('stop-button')) {
-        console.log('stop');
-        button.classList.remove('stop-button');
-        button.classList.add('start-button');
-        button.innerText = 'Start';
-
-        // Send message to extension to stop highlighting
-        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-          chrome.tabs.sendMessage(tabs[0].id, { action: 'stopHighlighting' });
-        });
+  chrome.runtime.onMessage.addListener((message) => {
+    switch (message.action) {
+      case 'updateStatus': {
+        updateButtons(message.status);
+        break;
       }
-    });
-  }
-});
+    }
+  });
 
-const slider = document.getElementById('action-interval-slider');
-const currentValue = document.getElementById('current-value');
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]?.id) {
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'getStatus' }, function (response) {
+        updateButtons(response.status);
+      });
+    }
+  });
 
-function updateSliderValue() {
-  const value = parseFloat(slider.value);
-  console.log(slider.value); // No need to divide, as the range is already set correctly
-  currentValue.innerText = value.toFixed(2) + 's'; // Update to show 2 decimal points for consistency
+  intervalSlider.addEventListener('input', updateSliderValue);
+
+  actionButton.addEventListener('click', function () {
+    if (actionButton.classList.contains('start-button')) {
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        if (tabs[0]?.id) {
+          chrome.tabs.sendMessage(tabs[0].id, { action: 'startHighlighting', interval: parseFloat(intervalSlider.value) * 1000 });
+        }
+      });
+      // updateButtons();
+      return;
+    }
+    if (actionButton.classList.contains('stop-button')) {
+      chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        if (tabs[0]?.id) {
+          chrome.tabs.sendMessage(tabs[0].id, { action: 'stopHighlighting' });
+        }
+      });
+      // updateButtons();
+      return;
+    }
+  });
+
+  updateSliderValue();
+  updateButtons('Ready');
+} catch (error) {
+  console.log('Error:', error);
 }
 
-slider.addEventListener('input', updateSliderValue);
-updateSliderValue(); // Update on initial load
+/**
+ * @param {'Ready'|'Running'|'Stopping'} status
+ */
+async function updateButtons(status) {
+  switch (status) {
+    case 'Ready':
+      actionButton.classList.remove('stop-button');
+      actionButton.classList.add('start-button');
+      actionButton.innerText = 'Start';
+      break;
+    case 'Stopping':
+      actionButton.classList.add('stop-button');
+      actionButton.classList.remove('start-button');
+      actionButton.innerText = 'Stopping...';
+      break;
+    default: {
+      actionButton.classList.add('stop-button');
+      actionButton.classList.remove('start-button');
+      actionButton.innerText = 'Stop';
+    }
+  }
+}
+
+function updateSliderValue() {
+  const value = parseFloat(intervalSlider.value);
+  console.log(intervalSlider.value); // No need to divide, as the range is already set correctly
+  sliderCurrentValue.innerText = value.toFixed(2) + 's'; // Update to show 2 decimal points for consistency
+}

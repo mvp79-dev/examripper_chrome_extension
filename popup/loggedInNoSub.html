@@ -5,21 +5,22 @@
     <title>Exam Ripper</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="loggedInNoSub.css" />
-    <script src="redirects.js"></script>
-    <script src="getName.js"></script>
-    <script src="popup.js"></script>
+    <script src="getName.js" defer></script>
+    <script src="redirects.js" defer></script>
   </head>
   <body>
     <div class="container">
       <img src="../icons/icon128.png" alt="Exam Ripper Logo" class="logo" />
       <h1 id="welcome">Welcome, NAME</h1>
       <p class="subscriber-status not-subscribed">You are not actively subscribed to Exam Ripper.</p>
-      <button class="subscribe-button">
-        <a href="https://www.patreon.com/ExamRipper" target="_blank" style="text-decoration: none; color: #ffffff">
-          <img src="../icons/patreon.svg" alt="Patreon Icon" class="icon" />
-          Subscribe on Patreon
-        </a>
-      </button>
+      <form action="https://www.patreon.com/ExamRipper" target="_blank">
+        <button class="subscribe-button">
+          <span style="text-decoration: none; color: #ffffff">
+            <img src="../icons/patreon.svg" alt="Patreon Icon" class="icon" />
+            Subscribe on Patreon
+          </span>
+        </button>
+      </form>
       <br />
       <a class="alreadysubscribed" href="https://examripper-288287396080.herokuapp.com/start-auth" target="_blank">
         Already subscribed? Click here to relogin

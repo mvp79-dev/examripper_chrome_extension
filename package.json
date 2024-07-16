@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "scripts": {
+    "format-debug": "prettier . --debug-check",
+    "format": "prettier . --write"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "prettier": "^3.3.3"
+  }
+}

@@ -68,7 +68,11 @@ class Highlighter {
         setTimeout(() => loop(), self.action_interval);
       } catch (error) {
         self.updateStatus('Ready');
-        console.error('Error:', error);
+        if (error === 'Abort') {
+          console.log('Abort');
+        } else {
+          console.log('Error:', error);
+        }
       }
     })();
   }

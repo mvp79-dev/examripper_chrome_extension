@@ -4,10 +4,10 @@
 //   text: 'https://examripper-288287396080.herokuapp.com/api/ask',
 // };
 const API_URLS = {
-  image: 'http://localhost:8000/',
-  matchterms: 'http://localhost:8000/match-terms',
-  text: 'http://localhost:8000/',
-  validate: 'http://localhost:8000/validate',
+  image: 'http://localhost:5500/',
+  matchterms: 'http://localhost:5500/match-terms',
+  text: 'http://localhost:5500/',
+  validate: 'http://localhost:5500/validate',
 };
 
 const NOTABLE_FUNCTIONS = () => {
@@ -91,7 +91,7 @@ class Highlighter {
 
     console.log('looking for next question button or view summary button');
     if (new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['Next Question', 'View Summary']).anyIncludesAny().matchedElement) {
-      form.setAttribute('data-answered', 'true'); // question has already been submitted
+      // form.setAttribute('data-answered', 'true'); // question has already been submitted
       return;
     }
 
@@ -184,7 +184,7 @@ class Highlighter {
       //TODO: is response_data.quizId the correct name?
       const { matchedText } = new InnerTextMatcher([feedbackSection], ['Incorrect', 'Correct']).anyIncludesAny();
       if (matchedText === 'correct') {
-        form.setAttribute('data-answered', 'true');
+        // form.setAttribute('data-answered', 'true');
         await this.sendAnswerFeedbackToServer({ quizId, isCorrect: true });
       }
       if (matchedText === 'incorrect') {
@@ -343,17 +343,25 @@ class Highlighter {
     log_call();
 
     for (const form of document.querySelectorAll('form')) {
-      // look for custom injected data
-      if (form.getAttribute('data-answered') === 'true') {
-        continue; // skip
+      // if (form.getAttribute('data-answered') === 'true') {
+      //   continue; // skip
+      // }
+
+      const feedbackSection = this.getFeedbackSection(form);
+      if (feedbackSection) {
+        const { matchedText } = new InnerTextMatcher([feedbackSection], ['Incorrect', 'Correct']).anyIncludesAny();
+        if (matchedText) {
+          console.log(`"${matchedText}" found in feedback section, skipping.`);
+          continue; // skip
+        }
       }
+
       // search for "Question ... of"
       if (new InnerTextMatcher([form], ['Question', 'of']).anyIncludesEachInOrder()) {
-        return form;
-      }
-      // search for expected buttons
-      if (new InnerTextMatcher(this.getButtons(form), ['Next Question', 'Submit', 'View Summary']).anyIncludesAny()) {
-        return form;
+        // search for "Submit" button
+        if (new InnerTextMatcher(this.getButtons(form), ['Submit']).anyIncludesAny()) {
+          return form;
+        }
       }
     }
     throw 'No unanswered questions found.';
@@ -1022,6 +1030,7 @@ window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
     // This page was restored from the bfcache.
     console.log('%cThis page was restored from the bfcache.', 'color:red');
+    if (highlighter) highlighter.stop();
   } else {
     // This page was loaded normally.
     console.log('%cThis page was loaded normally.', 'color:red');

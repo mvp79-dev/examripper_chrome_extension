@@ -4,8 +4,8 @@
 //   text: 'https://examripper-288287396080.herokuapp.com/api/ask',
 // };
 const API_URLS = {
-  image: 'http://localhost:8000/',
-  text: 'http://localhost:8000/',
+  image: 'http://localhost:5500/',
+  text: 'http://localhost:5500/',
 };
 
 //

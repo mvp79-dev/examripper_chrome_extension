@@ -1,11 +1,3 @@
-### Support for "Drag and Drop" Questions
-
-> Add drag and drop support (Attached above)
-
-- need to add new code
-
----
-
 ### More Detailed Status Indicator
 
 - ideally, would like to show individual processing steps, possibly with timer
@@ -13,7 +5,7 @@
 
 ---
 
-### Resume on Page Load
+### Resume on New Page Load
 
 - for multipage assessments, restart process when a _new page_ is loaded
 - don't restart on _page refresh_
@@ -23,6 +15,14 @@
 <br>
 
 # Finished
+
+### Support for "Drag and Drop" Questions
+
+> Add drag and drop support (Attached above)
+
+- need to add new code
+
+---
 
 ### Support for "Answer Here" Questions
 

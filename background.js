@@ -1,3 +1,5 @@
+console.log('background.js loaded');
+
 /** @param {string | undefined} tabUrl */
 function isValidExamUrl(tabUrl) {
   //TODO: unmock this

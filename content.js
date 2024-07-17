@@ -1000,45 +1000,53 @@ function DndSimulatorDataTransfer() {
   };
 }
 
+function log_call() {
+  const stack = new Error().stack;
+  const caller = stack?.split('\n')[2].trim();
+  if (caller) console.log('>', caller);
+}
+
 //
 //
 //
 
 let highlighter = /** @type{Highlighter|undefined} */ (undefined);
 
-chrome.runtime.connect().onDisconnect.addListener(function () {
-  Highlighter.RuntimeConnected = false;
-  console.log('onDisconnect, Highlighter.RuntimeConnected:', Highlighter.RuntimeConnected);
-});
+// content script
 
-chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  console.log('Received Message:', message);
-  switch (message.action) {
-    case 'getStatus': {
-      sendResponse({ status: Highlighter.Status });
-      break;
-    }
-    case 'startHighlighting': {
-      if (highlighter) highlighter.stop();
-      highlighter = new Highlighter(message.interval);
-      highlighter.start();
-      break;
-    }
-    case 'stopHighlighting': {
-      if (highlighter) highlighter.stop();
-      else Highlighter.UpdateStatus('Ready');
-      break;
-    }
+function BeforeUnloadHandler() {
+  Highlighter.UpdateStatus('Ready');
+}
+
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    // This page was restored from the bfcache.
+    console.log('%cThis page was restored from the bfcache.', 'color:red');
+  } else {
+    // This page was loaded normally.
+    console.log('%cThis page was loaded normally.', 'color:red');
+
+    chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+      console.log('Received Message:', message);
+      switch (message.action) {
+        case 'getStatus': {
+          sendResponse({ status: Highlighter.Status });
+          break;
+        }
+        case 'startHighlighting': {
+          window.addEventListener('beforeunload', BeforeUnloadHandler);
+          if (highlighter) highlighter.stop();
+          highlighter = new Highlighter(message.interval);
+          highlighter.start();
+          break;
+        }
+        case 'stopHighlighting': {
+          window.removeEventListener('beforeunload', BeforeUnloadHandler);
+          if (highlighter) highlighter.stop();
+          else Highlighter.UpdateStatus('Ready');
+          break;
+        }
+      }
+    });
   }
 });
-
-// once a new page loads, this script should be destroyed, so update status
-window.addEventListener('beforeunload', (event) => {
-  Highlighter.UpdateStatus('Ready');
-});
-
-function log_call() {
-  const stack = new Error().stack;
-  const caller = stack?.split('\n')[2].trim();
-  if (caller) console.log('>', caller);
-}

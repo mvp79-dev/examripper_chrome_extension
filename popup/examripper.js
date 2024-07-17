@@ -10,6 +10,7 @@ try {
   if (!(actionButton instanceof HTMLButtonElement)) throw 'startButton not HTMLButtonElement';
 
   chrome.runtime.onMessage.addListener((message) => {
+    console.log('onMessage:', message);
     switch (message.action) {
       case 'updateStatus': {
         updateButtons(message.status);
@@ -21,8 +22,11 @@ try {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]?.id) {
       console.log('chrome.tabs.sendMessage, getStatus');
-      chrome.tabs.sendMessage(tabs[0].id, { action: 'getStatus' }, function (response) {
-        updateButtons(response.status);
+      chrome.tabs.sendMessage(tabs[0]?.id, { action: 'getStatus' }, function (response) {
+        console.log('getStatus response:', response);
+        const error = chrome.runtime.lastError;
+        if (error) console.log('chrome.runtime.lastError', error);
+        else updateButtons(response.status);
       });
     }
   });
@@ -34,20 +38,24 @@ try {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         if (tabs[0]?.id) {
           console.log('chrome.tabs.sendMessage, startHighlighting');
-          chrome.tabs.sendMessage(tabs[0].id, { action: 'startHighlighting', interval: parseFloat(intervalSlider.value) * 1000 });
+          chrome.tabs.sendMessage(tabs[0].id, { action: 'startHighlighting', interval: parseFloat(intervalSlider.value) * 1000 }, function () {
+            const error = chrome.runtime.lastError;
+            if (error) console.log('chrome.runtime.lastError', error);
+          });
         }
       });
-      // updateButtons();
       return;
     }
     if (actionButton.classList.contains('stop-button')) {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         if (tabs[0]?.id) {
           console.log('chrome.tabs.sendMessage, stopHighlighting');
-          chrome.tabs.sendMessage(tabs[0].id, { action: 'stopHighlighting' });
+          chrome.tabs.sendMessage(tabs[0].id, { action: 'stopHighlighting' }, function () {
+            const error = chrome.runtime.lastError;
+            if (error) console.log('chrome.runtime.lastError', error);
+          });
         }
       });
-      // updateButtons();
       return;
     }
   });
@@ -62,6 +70,7 @@ try {
  * @param {'Ready'|'Running'|'Stopping'} status
  */
 async function updateButtons(status) {
+  console.log('updateButtons:', status);
   switch (status) {
     case 'Ready':
       actionButton.classList.remove('stop-button');

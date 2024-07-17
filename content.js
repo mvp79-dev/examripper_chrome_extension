@@ -6,6 +6,7 @@
 const API_URLS = {
   image: 'http://localhost:8000/',
   text: 'http://localhost:8000/',
+  validate: 'http://localhost:8000/validate',
 };
 
 async function getAuthToken() {
@@ -22,6 +23,7 @@ async function getAuthToken() {
 }
 
 class Highlighter {
+  //TODO: hook this up again
   static Analytics = {
     image_search_count: 0,
     process_loop_count: 0,
@@ -29,24 +31,38 @@ class Highlighter {
     submission_count: 0,
   };
 
+  // Add new question types here for easy suggestions.
   static Question_Type = Object.freeze({
     Answer_Here: 'Answer_Here',
     Drag_and_Drop: 'Drag_and_Drop',
     Multiple_Choice: 'Multiple_Choice',
   });
 
-  static Status = Object.freeze({
+  // Add new states here.
+  static Status_Type = Object.freeze({
     Ready: 'Ready',
     Running: 'Running',
     Stopping: 'Stopping',
   });
 
+  static Status = /** @type {keyof Highlighter.Status_Type} */ (Highlighter.Status_Type.Ready);
+
+  /** @param {keyof Highlighter.Status_Type} new_status */
+  static UpdateStatus(new_status) {
+    log_call();
+
+    if (Highlighter.Status === 'Ready' && new_status === 'Stopping') {
+      new_status = 'Ready';
+    }
+    Highlighter.Status = new_status;
+    chrome.runtime.sendMessage({ action: 'updateStatus', status: Highlighter.Status });
+  }
+
   abort = false;
-  status = /** @type {keyof Highlighter.Status}*/ (Highlighter.Status.Ready);
 
   /**
-   * @param {number} action_interval
    * @memberof Highlighter
+   * @param {number} action_interval
    */
   constructor(action_interval) {
     this.action_interval = action_interval;
@@ -56,8 +72,9 @@ class Highlighter {
   start() {
     log_call();
 
+    Highlighter.UpdateStatus('Running');
+
     const self = this;
-    self.updateStatus('Running');
     (async function loop() {
       console.log('');
       console.log('');
@@ -67,7 +84,7 @@ class Highlighter {
         await self.process();
         setTimeout(() => loop(), self.action_interval);
       } catch (error) {
-        self.updateStatus('Ready');
+        Highlighter.UpdateStatus('Ready');
         if (error === 'Abort') {
           console.log('Abort');
         } else {
@@ -81,48 +98,46 @@ class Highlighter {
   stop() {
     log_call();
 
-    this.updateStatus('Stopping');
+    Highlighter.UpdateStatus('Stopping');
     this.abort = true;
   }
 
-  /**
-   * @param {keyof Highlighter.Status} new_status
-   * @memberof Highlighter */
-  updateStatus(new_status) {
-    log_call();
-
-    if (this.status === 'Ready' && new_status === 'Stopping') {
-      new_status = 'Ready';
-    }
-    this.status = new_status;
-    chrome.runtime.sendMessage({ action: 'updateStatus', status: this.status });
-  }
-
+  // The main method.
   /** @memberof Highlighter */
   async process() {
     log_call();
 
     const form = this.getNextUnansweredQuestionForm();
-    const response_data = await this.sendFormDataToServer(form);
+    const { quizId, response } = await this.sendFormDataToServer(form);
     const question_type = this.getQuestionType(form);
 
     this.assertNotAborting();
 
     if (question_type === 'Answer_Here') {
       console.log('writing in short answer');
+      const answerBox = this.getShortAnswerInput(form);
+      if (answerBox) {
+        answerBox.value = response;
+        await this.pause(this.action_interval);
+      }
     }
 
     if (question_type === 'Drag_and_Drop') {
       console.log('dragging items to correct boxes');
+      const dragAndDrop = this.getDragAndDropSourceList(form);
+      if (dragAndDrop) {
+        // do dragging and dropping stuff
+        await this.pause(this.action_interval);
+      }
     }
 
     if (question_type === 'Multiple_Choice') {
       console.log('selecting multiple choice answer');
-      const firstMatchingLabel = new InnerTextMatcher([...form.querySelectorAll('label')], [response_data.response]).firstToIncludeAny();
-      const radioButton = firstMatchingLabel ? this.getRadioInputs(firstMatchingLabel)[0] : undefined;
-      if (radioButton) {
-        console.log('radioButton.click()');
-        radioButton.click();
+      const { matchedElement: label } = new InnerTextMatcher([...form.querySelectorAll('label')], [response]).anyIncludesAny();
+      const radio_button = label ? this.getRadioInputs(label)[0] : undefined;
+      if (radio_button) {
+        console.log('radio_button.click()');
+        radio_button.click();
         await this.pause(this.action_interval);
       } else {
         // it would be weird that the radio button is missing, but what if we don't find it?
@@ -133,8 +148,7 @@ class Highlighter {
     this.assertNotAborting();
 
     console.log('looking for submit button');
-    const submit_button = new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['Submit']).firstToIncludeAny();
-    console.log('submit_button:', submit_button);
+    const { matchedElement: submit_button } = new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['Submit']).anyIncludesAny();
     if (submit_button) {
       console.log('submit_button.click()');
       submit_button.click();
@@ -144,7 +158,7 @@ class Highlighter {
       // ideally, we would wait for the form's html to change a bit
     } else {
       // it would be weird that the submit button is missing, but what if we don't find it?
-      return;
+      // though, it could be missing if it was already clicked and this question is being repeated
     }
 
     this.assertNotAborting();
@@ -152,12 +166,14 @@ class Highlighter {
     console.log('looking for feedback');
     const feedbackSection = this.getFeedbackSection(form);
     if (feedbackSection) {
-      if (new InnerTextMatcher([feedbackSection], ['Correct']).anyIncludesAny()) {
+      //TODO: is response_data.quizId the correct name?
+      const { matchedText } = new InnerTextMatcher([feedbackSection], ['Incorrect', 'Correct']).anyIncludesAny();
+      if (matchedText === 'correct') {
         form.setAttribute('data-answered', 'true');
-      } else {
-        // tell server that answer was incorrect
-        // what to do next?
-        return;
+        await this.sendAnswerFeedbackToServer({ quizId, isCorrect: true });
+      }
+      if (matchedText === 'incorrect') {
+        await this.sendAnswerFeedbackToServer({ quizId, isCorrect: false });
       }
     } else {
       // couldn't find the feedback section
@@ -168,7 +184,8 @@ class Highlighter {
     this.assertNotAborting();
 
     console.log('looking for next question button');
-    const next_button = new InnerTextMatcher(this.getButtons(form), ['Next Question']).firstToIncludeAny();
+    const { matchedElement: next_button } = new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['Next Question']).anyIncludesAny();
+    console.log('buttons:', this.getButtons(form));
     if (next_button) {
       console.log('next_button.click()');
       next_button.click();
@@ -177,8 +194,9 @@ class Highlighter {
     }
 
     console.log('looking for view summary button');
-    const view_summary_button = new InnerTextMatcher(this.getButtons(form), ['View Summary']).firstToIncludeAny();
+    const { matchedElement: view_summary_button } = new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['View Summary']).anyIncludesAny();
     if (view_summary_button) {
+      console.log('found view summary button. stopping');
       this.stop();
     }
   }
@@ -211,7 +229,7 @@ class Highlighter {
     const list = [];
     list.push(...element.querySelectorAll('button'));
     for (const input of element.querySelectorAll('input')) {
-      if (input.type === 'button' || input.type === 'submit') {
+      if (input.type.toLowerCase() === 'button' || input.type.toLowerCase() === 'submit') {
         list.push(input);
       }
     }
@@ -234,7 +252,7 @@ class Highlighter {
 
     const list = [];
     for (const input of element.querySelectorAll('input')) {
-      if (input.type === 'radio') {
+      if (input.type.toLowerCase() === 'radio') {
         list.push(input);
       }
     }
@@ -245,9 +263,21 @@ class Highlighter {
   getQuestionType(form) {
     log_call();
 
-    if (form.querySelector('input[data-placeholder="Answer here"]')) return Highlighter.Question_Type.Answer_Here;
-    if (form.innerHTML.includes('drag-source')) return Highlighter.Question_Type.Drag_and_Drop;
+    if (this.getShortAnswerInput(form)) return Highlighter.Question_Type.Answer_Here;
+    if (this.getDragAndDropSourceList(form)) return Highlighter.Question_Type.Drag_and_Drop;
     return Highlighter.Question_Type.Multiple_Choice;
+  }
+
+  /** @param {HTMLFormElement} form */
+  getShortAnswerInput(form) {
+    const element = form.querySelector('input[data-placeholder="Answer here"]');
+    return element instanceof HTMLInputElement ? element : undefined;
+  }
+
+  /** @param {HTMLFormElement} form */
+  getDragAndDropSourceList(form) {
+    const element = form.querySelector('kp-drag-source-list');
+    return element instanceof HTMLElement ? element : undefined;
   }
 
   /** @param {HTMLFormElement} form */
@@ -260,8 +290,8 @@ class Highlighter {
   }
 
   /**
-   * @param {HTMLFormElement} form
    * @memberof Highlighter
+   * @param {HTMLFormElement} form
    */
   async sendFormDataToServer(form) {
     log_call();
@@ -285,33 +315,45 @@ class Highlighter {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request_data),
     });
+    const response_data = await response.json();
+    return {
+      quizId: response_data.id,
+      response: response_data.response,
+    };
+  }
+
+  /**
+   * @memberof Highlighter
+   * @param {object} params
+   * @param {string} params.quizId
+   * @param {boolean} params.isCorrect
+   */
+  async sendAnswerFeedbackToServer({ quizId, isCorrect }) {
+    log_call();
+    this.assertNotAborting();
+
+    const authToken = await getAuthToken();
+    if (authToken === null || authToken === undefined) throw 'AuthToken is null.';
+
+    const request_data = {
+      authToken: authToken,
+      quizTitle: this.getQuizTitle(),
+      id: quizId,
+      isCorrect,
+    };
+    this.deleteUndefinedKeys(request_data);
+
+    const response = await fetch(API_URLS.validate, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request_data),
+    });
     return await response.json();
   }
 
   /**
-   * @param {HTMLFormElement} form
-   * @param {object} response_data
-   * @param {string=} response_data.response
-   * @param {string=} response_data.quizId
    * @memberof Highlighter
-   */
-  async processAPIResponse(form, { response, quizId }) {
-    log_call();
-
-    if (response) {
-      const label = new InnerTextMatcher([...form.querySelectorAll('label')], [response]).firstToIncludeAny();
-      const radio = label ? this.getRadioInputs(label)[0] : undefined;
-      if (radio) {
-        radio.click();
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
    * @param {HTMLFormElement} form
-   * @memberof Highlighter
    */
   async getImageData(form) {
     log_call();
@@ -361,23 +403,8 @@ class Highlighter {
   }
 
   /**
-   * @param {HTMLElement[]} element_list
-   * @param {(keyof HTMLElement)[]} prop_names
    * @memberof Highlighter
-   */
-  toProps(element_list, prop_names) {
-    const prop_list = [];
-    for (const element of element_list) {
-      for (const prop_name of prop_names) {
-        prop_list.push(element[prop_name]);
-      }
-    }
-    return prop_list;
-  }
-
-  /**
    * @throws 'Abort Highlighting'
-   * @memberof Highlighter
    */
   assertNotAborting() {
     if (this.abort === false) {
@@ -421,11 +448,11 @@ class Highlighter {
  */
 class TextMatcher {
   /**
+   * @memberof InnerTextMatcher
    * @param {T[]} element_list
    * @param {(keyof T)[]} property_names
    * @param {string[]} match_list
    * @param {boolean=} case_sensitive
-   * @memberof InnerTextMatcher
    */
   constructor(element_list, property_names, match_list, case_sensitive = false) {
     this.element_data_list = [];
@@ -451,14 +478,15 @@ class TextMatcher {
    * @memberof InnerTextMatcher
    */
   anyIncludesAny() {
-    for (const { property_list } of this.element_data_list) {
+    for (const { element, property_list } of this.element_data_list) {
       for (const property of property_list) {
-        if (this.includesAny(property)) {
-          return true;
+        const matched = this.includesAny(property);
+        if (matched) {
+          return { matchedElement: element, matchedProperty: property, matchedText: matched.text };
         }
       }
     }
-    return false;
+    return {};
   }
 
   /**
@@ -466,14 +494,14 @@ class TextMatcher {
    * @memberof InnerTextMatcher
    */
   anyIncludesEach() {
-    for (const { property_list } of this.element_data_list) {
+    for (const { element, property_list } of this.element_data_list) {
       for (const property of property_list) {
         if (this.includesEach(property)) {
-          return true;
+          return { matchedElement: element, matchedProperty: property };
         }
       }
     }
-    return false;
+    return {};
   }
 
   /**
@@ -481,79 +509,34 @@ class TextMatcher {
    * @memberof InnerTextMatcher
    */
   anyIncludesEachInOrder() {
-    for (const { property_list } of this.element_data_list) {
-      for (const property of property_list) {
-        if (this.includesEachInOrder(property)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /**
-   * @public
-   * @memberof InnerTextMatcher
-   */
-  firstToIncludeAny() {
-    for (const { element, property_list } of this.element_data_list) {
-      for (const property of property_list) {
-        if (this.includesAny(property)) {
-          return element;
-        }
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * @public
-   * @memberof InnerTextMatcher
-   */
-  firstToIncludeEach() {
-    for (const { element, property_list } of this.element_data_list) {
-      for (const property of property_list) {
-        if (this.includesEach(property)) {
-          return element;
-        }
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * @public
-   * @memberof InnerTextMatcher
-   */
-  firstToIncludeEachInOrder() {
     for (const { element, property_list } of this.element_data_list) {
       for (const property of property_list) {
         if (this.includesEachInOrder(property)) {
-          return element;
+          return { matchedElement: element, matchedProperty: property };
         }
       }
     }
-    return undefined;
+    return {};
   }
 
   /**
    * @private
-   * @param {string} property
    * @memberof InnerTextMatcher
+   * @param {string} property
    */
   includesAny(property) {
     for (const matchText of this.match_list) {
       if (property.indexOf(matchText) > -1) {
-        return true;
+        return { text: matchText };
       }
     }
-    return false;
+    return undefined;
   }
 
   /**
    * @private
-   * @param {string} property
    * @memberof InnerTextMatcher
+   * @param {string} property
    */
   includesEach(property) {
     for (const matchText of this.match_list) {
@@ -566,8 +549,8 @@ class TextMatcher {
 
   /**
    * @private
-   * @param {string} property
    * @memberof InnerTextMatcher
+   * @param {string} property
    */
   includesEachInOrder(property) {
     let startIndex = 0;
@@ -588,10 +571,10 @@ class TextMatcher {
  */
 class InnerTextMatcher extends TextMatcher {
   /**
+   * @memberof InnerTextMatcher
    * @param {T[]} element_list
    * @param {string[]} match_list
    * @param {boolean=} case_sensitive
-   * @memberof InnerTextMatcher
    */
   constructor(element_list, match_list, case_sensitive = false) {
     super(element_list, ['innerText'], match_list, case_sensitive);
@@ -608,7 +591,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log('Received Message:', message);
   switch (message.action) {
     case 'getStatus': {
-      sendResponse({ status: highlighter?.status ?? Highlighter.Status.Ready });
+      sendResponse({ status: Highlighter.Status });
       break;
     }
     case 'startHighlighting': {
@@ -619,6 +602,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     }
     case 'stopHighlighting': {
       if (highlighter) highlighter.stop();
+      else Highlighter.UpdateStatus('Ready');
       break;
     }
   }

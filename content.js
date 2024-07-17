@@ -68,50 +68,25 @@ class Highlighter {
     this.action_interval = action_interval;
   }
 
-  /** @memberof Highlighter */
-  start() {
-    log_call();
-
-    Highlighter.UpdateStatus('Running');
-
-    const self = this;
-    (async function loop() {
-      console.log('');
-      console.log('');
-      console.log('');
-      try {
-        self.assertNotAborting();
-        await self.process();
-        setTimeout(() => loop(), self.action_interval);
-      } catch (error) {
-        Highlighter.UpdateStatus('Ready');
-        if (error === 'Abort') {
-          console.log('Abort');
-        } else {
-          console.log('Error:', error);
-        }
-      }
-    })();
-  }
-
-  /** @memberof Highlighter */
-  stop() {
-    log_call();
-
-    Highlighter.UpdateStatus('Stopping');
-    this.abort = true;
-  }
-
   // The main method.
   /** @memberof Highlighter */
   async process() {
     log_call();
 
     const form = this.getNextUnansweredQuestionForm();
+
+    console.log('looking for next question button or view summary button');
+    if (new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['Next Question', 'View Summary']).anyIncludesAny().matchedElement) {
+      // question has already been submitted
+      form.setAttribute('data-answered', 'true');
+      return;
+    }
+
     const { quizId, response } = await this.sendFormDataToServer(form);
-    const question_type = this.getQuestionType(form);
 
     this.assertNotAborting();
+
+    const question_type = this.getQuestionType(form);
 
     if (question_type === 'Answer_Here') {
       console.log('writing in short answer');
@@ -141,7 +116,6 @@ class Highlighter {
         await this.pause(this.action_interval);
       } else {
         // it would be weird that the radio button is missing, but what if we don't find it?
-        return;
       }
     }
 
@@ -199,6 +173,40 @@ class Highlighter {
       console.log('found view summary button. stopping');
       this.stop();
     }
+  }
+
+  /** @memberof Highlighter */
+  start() {
+    log_call();
+
+    Highlighter.UpdateStatus('Running');
+
+    const self = this;
+    (async function loop() {
+      console.log('');
+      console.log('');
+      console.log('');
+      try {
+        self.assertNotAborting();
+        await self.process();
+        setTimeout(() => loop(), self.action_interval);
+      } catch (error) {
+        Highlighter.UpdateStatus('Ready');
+        if (error === 'Abort') {
+          console.log('Abort');
+        } else {
+          console.log('Error:', error);
+        }
+      }
+    })();
+  }
+
+  /** @memberof Highlighter */
+  stop() {
+    log_call();
+
+    Highlighter.UpdateStatus('Stopping');
+    this.abort = true;
   }
 
   /** @memberof Highlighter */

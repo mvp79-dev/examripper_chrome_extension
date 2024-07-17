@@ -1,26 +1,15 @@
-### On Incorrect Answer, Send Correct Answer to Server
-
-> After question is done, if it hasnt moved onto a new question, send another request back to my endpoint with a bool if it got the answer correct or not (correct answer attached above)
-
-- assume that the Next button means the question is correct, otherwise incorrect
-
----
-
-### Support "Answer Here" and "Drag and Drop" Questions
-
-> Add input box support ( attached above)
-
-- `data-placeholder="Answer here"`
+### Support for "Drag and Drop" Questions
 
 > Add drag and drop support (Attached above)
 
-- probably need better page templates
+- need to add new code
 
 ---
 
 ### More Detailed Status Indicator
 
 - ideally, would like to show individual processing steps, possibly with timer
+- almost ready
 
 ---
 
@@ -35,24 +24,44 @@
 
 # Finished
 
-## Interval Bug
+### Support for "Answer Here" Questions
+
+> Add input box support ( attached above)
+
+- `data-placeholder="Answer here"`
+
+### On Incorrect Answer, Send Correct Answer to Server
+
+> After question is done, if it hasnt moved onto a new question, send another request back to my endpoint with a bool if it got the answer correct or not (correct answer attached above)
+
+- assume that the Next button means the question is correct, otherwise incorrect
+
+---
+
+### Interval Bug
 
 > Fix the interval bug where it keeps on repeating asking the question multiple times ( if you go to log you see the function runs over and over)
 
-## Send Quiz Title
+---
+
+### Send Quiz Title
 
 > Add a field for the quiz its on in the request (inner text trimmed of body > kp-app > kp-platform > kp-app-shell > kp-nav-header > div.toolbar.ng-star-inserted > kp-content-lane > div. you can also see this at the top of any of the of the quizes i showed you)
 
 - to the extension's api server
 
-## Better Popup Management
+---
+
+### Better Popup Management
 
 > Better way of managing popups
 
 - referring to extension main popup
 - is this part of 6?
 
-## Status Indicator in Popup
+---
+
+### Status Indicator in Popup
 
 > right now clicking start just changes the css property to the stop button, and vice versa, would it be possible when the popup is rendered for the the button to be rendered of what the state of the loop is
 >

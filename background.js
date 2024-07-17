@@ -47,7 +47,6 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   }
 });
 
-chrome.runtime.onMessage.addListener((message) => {
-  switch (message.action) {
-  }
-});
+// needed to avoid errors
+chrome.runtime.onConnect.addListener(function () {});
+chrome.runtime.onMessage.addListener(function () {});

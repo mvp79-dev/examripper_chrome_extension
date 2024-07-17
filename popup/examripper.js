@@ -20,6 +20,7 @@ try {
 
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]?.id) {
+      console.log('chrome.tabs.sendMessage, getStatus');
       chrome.tabs.sendMessage(tabs[0].id, { action: 'getStatus' }, function (response) {
         updateButtons(response.status);
       });
@@ -32,6 +33,7 @@ try {
     if (actionButton.classList.contains('start-button')) {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         if (tabs[0]?.id) {
+          console.log('chrome.tabs.sendMessage, startHighlighting');
           chrome.tabs.sendMessage(tabs[0].id, { action: 'startHighlighting', interval: parseFloat(intervalSlider.value) * 1000 });
         }
       });
@@ -41,6 +43,7 @@ try {
     if (actionButton.classList.contains('stop-button')) {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         if (tabs[0]?.id) {
+          console.log('chrome.tabs.sendMessage, stopHighlighting');
           chrome.tabs.sendMessage(tabs[0].id, { action: 'stopHighlighting' });
         }
       });
@@ -80,6 +83,5 @@ async function updateButtons(status) {
 
 function updateSliderValue() {
   const value = parseFloat(intervalSlider.value);
-  console.log(intervalSlider.value); // No need to divide, as the range is already set correctly
   sliderCurrentValue.innerText = value.toFixed(2) + 's'; // Update to show 2 decimal points for consistency
 }

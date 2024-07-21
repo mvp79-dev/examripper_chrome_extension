@@ -30,30 +30,46 @@ The expected properties on every **request** and **_response_** object.
 
 ### /api/ask
 
-Text-only questions (ie. multiple choice and short answer).
+This endpoint is designed to handle requests for answering text-based quiz questions, verifying user authentication, and interacting with an external service for generating answers.
 
-> request
+Request
+
+The request should be a POST request containing a JSON payload with the following fields:
+
+	•	text: A string containing the quiz question.
+	•	authToken: An authentication token for user verification.
+	•	quizTitle: The title of the quiz associated with the request.
+
+Response
+
+The response will be a JSON object containing the following fields:
+
+	•	answer: A string containing the correct answer to the quiz question based on the external service’s analysis.
+	•	id: A unique identifier for the request session.
+
+Status Codes
+
+	•	200 OK: The request was successful and the response contains the correct answer.
+	•	400 Bad Request: The request contained a question that has already been answered.
+	•	403 Forbidden: The request was unauthorized. 
+	•	500 Internal Server Error: There was an error processing the request due to an external service failure or other backend issue.
+
+Notes
+
+	•	The system checks if the request limit is exceeded and prevents excessive submissions by the same user.
+	•	Unauthorized attempts trigger alerts to a webhook with detailed user information.
+
+Example
+
+For a POST request with appropriate JSON data, the response might look like this:
 
 ```json
 {
-  ...
-  "text": string,
+“answer”: “11”,
+“id”: “abcdef”
 }
 ```
 
-- `text`: The entire prompt for the current question form. Includes the question title/name, the question itself, and the available answer choices if any.
-
-> response
-
-```json
-{
-  "answer": string,
-}
-```
-
-- `answer`: The text for the answer.
-
----
 
 ### /api/image
 
@@ -79,7 +95,7 @@ The response will be a JSON object containing the following fields:
 Status Codes
 
 	•	200 OK: The request was successful and the response contains the processed data.
-	•	403 Forbidden: The request was unauthorized. This occurs if the user’s email is not listed in the subscribers.
+	•	403 Forbidden: The request was unauthorized. 
 
 Notes
 

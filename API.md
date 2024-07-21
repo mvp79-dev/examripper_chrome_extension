@@ -117,70 +117,54 @@ For the “checkbox” quiz type, where multiple answers might be correct, the r
 This indicates that the correct answer to the quiz question identified by the processed image is “C”, and the session ID for this transaction is “12345”.
 
 
-### /match-terms
+###  /match-terms
 
-Drag and drop questions (ie. match a term with its definition).
+This endpoint is designed to process text submissions for matching terms with their descriptions, validate user authentication, and interact with an external service for generating matching responses.
 
-> request
+Request
 
-```json
-{
- ...
- string: string, ...
-}
-```
+The request should be a POST request containing a JSON payload with the following fields:
 
-- As of this moment, terms and their definitions are provided as `key:value` pairs directly in the request object.
+	•	text: A string containing the quiz question or prompt.
+	•	authToken: An authentication token for user verification.
+	•	quizTitle: The title of the quiz associated with the request.
 
-> ⚠️ **todo**
->
-> Should `key:value` pairs have a dedicated property container?
+Response
 
-> response
+The response will be a JSON object containing the following fields:
 
-```json
-{
-  "answer_dictionary": {
-    string: string, ...
-  }
-}
-```
+	•	answer_dictionary: A dictionary with terms as keys and their matched descriptions as values.
+	•	id: A unique identifier for the request session.
 
-- `answer_dictionary`: An object containing `key:value` pairs for matching.
+Status Codes
 
----
+	•	200 OK: The request was successful and the response contains the matched terms.
+	•	400 Bad Request: The request contained a question that has already been answered.
+	•	500 Internal Server Error: There was an error processing the request due to an external service failure or other backend issue.
 
-### /???checkboxes???
+Notes
 
-Multiple selection questions via checkboxes (do not confuse with multiple choice).
+	•	The system checks if the request limit is exceeded and prevents excessive submissions by the same user.
+	•	Unauthorized attempts trigger alerts to a webhook with detailed user information.
 
-> request
+Example
+
+For a POST request with appropriate JSON data, the response might look like this:
 
 ```json
 {
-  ...
-  ???
+“answer_dictionary”: {
+“Term1”: “Description A”,
+“Term2”: “Description B”,
+“Term3”: “Description C”
+},
+“id”: “123”
 }
 ```
 
-- Expected data is unknown at the moment.
+This response indicates that the terms have been successfully matched with their descriptions, and the session ID for this request is “123”.
 
-> ⚠️ **todo**
->
-> Are the answer choices being uploaded as a list?  
-> What is the property key?
 
-> response
-
-```json
-{
- "answer_list": string[]
-}
-```
-
-- `answer_list`: An array of texts for all answers that should be marked/selected.
-
----
 
 ### /validate
 

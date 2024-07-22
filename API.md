@@ -1,33 +1,5 @@
 # Server API
 
-### /
-
-The expected properties on every **request** and **_response_** object.
-
-#### Request
-
-```json
-{
-  "authToken": "string",
-  "quizTitle": "string"
-}
-```
-
-- `authToken`: Received from the server during the login auth flow.
-- `quizTitle`: Every assessment should have a quiz title/name at the top.
-
-#### Response
-
-```json
-{
-  "id": "string"
-}
-```
-
-- `id`: A unique id for the quiz to be used with the `/validate` endpoint.
-
----
-
 ### /api/ask
 
 This endpoint is designed to handle requests for answering text-based quiz questions, verifying user authentication, and interacting with an external service for generating answers.
@@ -43,6 +15,8 @@ The request should be a POST request containing a JSON payload with the followin
   "text": "A string containing the quiz question."
 }
 ```
+
+- should this include `quizType`?
 
 #### Response
 
@@ -82,6 +56,11 @@ For a POST request with appropriate JSON data, the response might look like this
 
 This endpoint is designed to process images submitted by users, apply transformations, and interact with external services for image analysis and response generation.
 
+Generally needed for:
+
+- questions with images
+- questions with math equations
+
 #### Request
 
 The request should be a POST request containing a JSON payload with the following fields:
@@ -94,6 +73,8 @@ The request should be a POST request containing a JSON payload with the followin
   "imgdata": "A string containing the base64 encoded data of the image."
 }
 ```
+
+- seems like `quizType` was meant to be `questionType`?
 
 #### Response
 

@@ -1,13 +1,12 @@
 //TODO: unmock the server when done
-// const API_URLS = {
-//   image: 'https://examripper-288287396080.herokuapp.com/imageDetermine',
-//   text: 'https://examripper-288287396080.herokuapp.com/api/ask',
-// };
+// const BASE_URL = 'https://examripper-288287396080.herokuapp.com';
+const BASE_URL = 'http://localhost:5500';
+
 const API_URLS = {
-  image: 'http://localhost:5500/',
-  matchterms: 'http://localhost:5500/match-terms',
-  text: 'http://localhost:5500/',
-  validate: 'http://localhost:5500/validate',
+  ask: BASE_URL + '/api/ask',
+  image: BASE_URL + '/api/image',
+  match_terms: BASE_URL + '/match-terms',
+  validate: BASE_URL + '/validate',
 };
 
 const NOTABLE_FUNCTIONS = () => {
@@ -43,10 +42,10 @@ class Highlighter {
 
   // Add new question types here for easy suggestions.
   static Question_Type = Object.freeze({
-    Checkboxes: 'Checkboxes',
-    Drag_and_Drop: 'Drag_and_Drop',
-    Multiple_Choice: 'Multiple_Choice',
-    Short_Answer: 'Short_Answer',
+    checkbox: 'checkbox',
+    dragAndDrop: 'dragAndDrop',
+    freeResponse: 'freeResponse',
+    multipleChoice: 'multipleChoice',
   });
 
   // Add new states here.
@@ -94,7 +93,7 @@ class Highlighter {
 
     this.assertNotAborting();
 
-    if (question_type === 'Checkboxes') {
+    if (question_type === Highlighter.Question_Type.checkbox) {
       if (server_response.answer_list === undefined) {
         throw 'Missing `answer_list` from server response.';
       }
@@ -102,7 +101,7 @@ class Highlighter {
       console.log('checkboxes');
     }
 
-    if (question_type === 'Drag_and_Drop') {
+    if (question_type === Highlighter.Question_Type.dragAndDrop) {
       if (server_response.answer_dictionary === undefined) {
         throw 'Missing `answer_dictionary` from server response.';
       }
@@ -134,7 +133,7 @@ class Highlighter {
       }
     }
 
-    if (question_type === 'Multiple_Choice') {
+    if (question_type === Highlighter.Question_Type.multipleChoice) {
       if (server_response.answer === undefined) {
         throw 'Missing `answer` from server response.';
       }
@@ -152,7 +151,7 @@ class Highlighter {
       }
     }
 
-    if (question_type === 'Short_Answer') {
+    if (question_type === Highlighter.Question_Type.freeResponse) {
       if (server_response.answer === undefined) {
         throw 'Missing `answer` from server response.';
       }
@@ -237,12 +236,16 @@ class Highlighter {
     this.deleteUndefinedKeys(request_data);
 
     const api_url = (function () {
-      if (question_type === 'Checkboxes') {
+      if (question_type === Highlighter.Question_Type.checkbox) {
         //TODO: which API url to use?
       }
-      if (question_type === 'Drag_and_Drop') return API_URLS.matchterms;
-      if (request_data.imgdata) return API_URLS.image;
-      return API_URLS.text;
+      if (question_type === Highlighter.Question_Type.dragAndDrop) {
+        return API_URLS.match_terms;
+      }
+      if (request_data.imgdata) {
+        return API_URLS.image;
+      }
+      return API_URLS.ask;
     })();
 
     // console.log('Sending request for the', addOrdinalSuffix(++requestCount), 'time.');
@@ -372,10 +375,10 @@ class Highlighter {
   getQuestionType(form) {
     log_call();
 
-    if (this.getCheckboxInputs(form).length > 0) return Highlighter.Question_Type.Checkboxes;
-    if (this.getDragItems(form).length > 0) return Highlighter.Question_Type.Drag_and_Drop;
-    if (this.getShortAnswerInput(form)) return Highlighter.Question_Type.Short_Answer;
-    return Highlighter.Question_Type.Multiple_Choice;
+    if (this.getCheckboxInputs(form).length > 0) return Highlighter.Question_Type.checkbox;
+    if (this.getDragItems(form).length > 0) return Highlighter.Question_Type.dragAndDrop;
+    if (this.getShortAnswerInput(form)) return Highlighter.Question_Type.freeResponse;
+    return Highlighter.Question_Type.multipleChoice;
   }
 
   /** @memberof Highlighter */

@@ -2,10 +2,19 @@
 // const BASE_URL = 'https://examripper-288287396080.herokuapp.com';
 const BASE_URL = 'http://localhost:5500';
 
+// const API_URLS = {
+//   ask: BASE_URL + '/api/ask',
+//   image: BASE_URL + '/api/image',
+//   match_terms: BASE_URL + '/match-terms',
+//   validate: BASE_URL + '/validate',
+// };
+
 const API_URLS = {
-  ask: BASE_URL + '/api/ask',
-  image: BASE_URL + '/api/image',
-  match_terms: BASE_URL + '/match-terms',
+  checkbox: BASE_URL + '',
+  dragAndDrop: BASE_URL + '',
+  freeResponse: BASE_URL + '',
+  multipleChoice: BASE_URL + '',
+  unknown: BASE_URL + '',
   validate: BASE_URL + '/validate',
 };
 
@@ -258,35 +267,32 @@ class Highlighter {
     log_call();
     this.assertNotAborting();
 
+    const api_url = (function () {
+      switch (question_type) {
+        case Highlighter.Question_Type.checkbox:
+          return API_URLS.checkbox;
+        case Highlighter.Question_Type.dragAndDrop:
+          return API_URLS.dragAndDrop;
+        case Highlighter.Question_Type.freeResponse:
+          return API_URLS.freeResponse;
+        case Highlighter.Question_Type.multipleChoice:
+          return API_URLS.multipleChoice;
+      }
+      return API_URLS.unknown;
+    })();
+
     const authToken = (await getAuthToken()) ?? undefined;
     if (authToken === undefined) {
       throw 'AuthToken is undefined.';
     }
 
-    //TODO: check over request data
     const request_data = {
       authToken: authToken,
       quizTitle: this.getQuizTitle(),
       imgdata: await this.getImageData(form),
       text: this.getQuestionText(form),
-      ...this.getFormData(form),
     };
-    this.deleteUndefinedKeys(request_data);
 
-    const api_url = (function () {
-      if (question_type === Highlighter.Question_Type.checkbox) {
-        //TODO: which API url to use?
-      }
-      if (question_type === Highlighter.Question_Type.dragAndDrop) {
-        return API_URLS.match_terms;
-      }
-      if (request_data.imgdata) {
-        return API_URLS.image;
-      }
-      return API_URLS.ask;
-    })();
-
-    // console.log('Sending request for the', addOrdinalSuffix(++requestCount), 'time.');
     const response = await fetch(api_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

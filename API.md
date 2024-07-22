@@ -213,7 +213,7 @@ This response indicates that the terms have been successfully matched with their
 
 Feedback from the assessment (if provided answer is marked correct or incorrect).
 
-#### request
+#### Request
 
 ```json
 {
@@ -227,9 +227,9 @@ Feedback from the assessment (if provided answer is marked correct or incorrect)
 - `id`: A unique id for the quiz provided by the server during calls to the other endpoints.
 - `isCorrect`: A boolean set to `true` if the assessment accepted the provided answer; `false` otherwise. The assessment may not provide direct feedback or may provide potentially misleading feedback. Try to determine the answer's correctness as accurately as possible.
 
-#### response
+#### Response
 
-no response
+No response.
 
 ---
 

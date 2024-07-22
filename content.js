@@ -93,77 +93,115 @@ class Highlighter {
 
     this.assertNotAborting();
 
-    if (question_type === Highlighter.Question_Type.checkbox) {
-      if (server_response.answer_list === undefined) {
-        throw 'Missing `answer_list` from server response.';
-      }
+    switch (question_type) {
+      case Highlighter.Question_Type.checkbox:
+        {
+          if (server_response.answer_list === undefined) {
+            throw 'Missing `answer_list` from server response.';
+          }
 
-      console.log('checkboxes');
-    }
+          console.log('checkboxes');
 
-    if (question_type === Highlighter.Question_Type.dragAndDrop) {
-      if (server_response.answer_dictionary === undefined) {
-        throw 'Missing `answer_dictionary` from server response.';
-      }
-
-      console.log('drag and drop');
-
-      const drag_items = this.getDragItems(form);
-      const drop_labels = this.getDropLabels(form);
-
-      for (const [key, value] of Object.entries(server_response.answer_dictionary)) {
-        const { matchedElement: dragItem } = new InnerTextMatcher(drag_items, [key]).anyIncludesAny() ?? {};
-        // console.log('dragItem', dragItem);
-        if (dragItem) {
-          console.log(`First Item ID for key "${key}": ${dragItem.id}`);
-          const { matchedElement: dropLabel } = new InnerTextMatcher(drop_labels, [value]).anyIncludesAny() ?? {};
-          // console.log('dropText', dropLabel);
-          if (dropLabel) {
-            const dropTarget = this.getClosestDropTarget(dropLabel);
-            // console.log('dropTarget', dropTarget);
-            if (dropTarget) {
-              console.log(`First Target ID for value "${value}": ${dropTarget.id}`);
-              // do dragging and dropping stuff
-              console.log('simulating drag and drop');
-              DndSimulatorDataTransfer().simulate(dragItem, dropTarget);
-              await this.pause(this.action_interval);
+          /**
+           * - grab a list of <label> elements within the <form> element
+           * - for each value sent back from the server:
+           * - > find the label that has the value
+           * - > get a list of the checkboxes for that label
+           * - > check the first one
+           */
+          const labels = [...form.querySelectorAll('label')];
+          for (const value of server_response.answer_list) {
+            const { matchedElement: label } = new InnerTextMatcher(labels, [value]).anyIncludesAny() ?? {};
+            const checkboxes = label ? this.getCheckboxInputs(label) : [];
+            if (checkboxes.length > 0) {
+              console.log('checking check box');
+              checkboxes[0].click();
             }
           }
         }
-      }
-    }
+        break;
+      case Highlighter.Question_Type.dragAndDrop:
+        {
+          if (server_response.answer_dictionary === undefined) {
+            throw 'Missing `answer_dictionary` from server response.';
+          }
 
-    if (question_type === Highlighter.Question_Type.multipleChoice) {
-      if (server_response.answer === undefined) {
-        throw 'Missing `answer` from server response.';
-      }
+          console.log('drag and drop');
 
-      console.log('multiple choice');
+          /**
+           * - grab a list of the drag items and labels for drop targets in the form
+           * - for each key:value pair sent back from the server:
+           * - > find the drag item that contains the key
+           * - > find the label that contains the value
+           * - > find the closest drop target to that label
+           * - > simulate drag and drop
+           */
+          const drag_items = this.getDragItems(form);
+          const drop_labels = this.getDropLabels(form);
+          for (const [key, value] of Object.entries(server_response.answer_dictionary)) {
+            const { matchedElement: dragItem } = new InnerTextMatcher(drag_items, [key]).anyIncludesAny() ?? {};
+            // console.log('dragItem', dragItem);
+            if (dragItem) {
+              console.log(`First Item ID for key "${key}": ${dragItem.id}`);
+              const { matchedElement: dropLabel } = new InnerTextMatcher(drop_labels, [value]).anyIncludesAny() ?? {};
+              // console.log('dropText', dropLabel);
+              if (dropLabel) {
+                const dropTarget = this.getClosestDropTarget(dropLabel);
+                // console.log('dropTarget', dropTarget);
+                if (dropTarget) {
+                  console.log(`First Target ID for value "${value}": ${dropTarget.id}`);
+                  // do dragging and dropping stuff
+                  console.log('simulating drag and drop');
+                  DndSimulatorDataTransfer().simulate(dragItem, dropTarget);
+                  await this.pause(this.action_interval);
+                }
+              }
+            }
+          }
+        }
+        break;
+      case Highlighter.Question_Type.freeResponse:
+        {
+          if (server_response.answer === undefined) {
+            throw 'Missing `answer` from server response.';
+          }
 
-      const { matchedElement: label } = new InnerTextMatcher([...form.querySelectorAll('label')], [server_response.answer]).anyIncludesAny() ?? {};
-      const radio_buttons = label ? this.getRadioInputs(label) : [];
-      if (radio_buttons.length > 0) {
-        console.log('clicking multiple choice answer');
-        radio_buttons[0].click();
-        await this.pause(this.action_interval);
-      } else {
-        // it would be weird that the radio button is missing, but what if we don't find it?
-      }
-    }
+          console.log('free response');
 
-    if (question_type === Highlighter.Question_Type.freeResponse) {
-      if (server_response.answer === undefined) {
-        throw 'Missing `answer` from server response.';
-      }
+          /**
+           * - grab the free response input element
+           * - write value from server into value
+           */
+          const answerBox = this.getFreeResponseInput(form);
+          if (answerBox) {
+            console.log('writing in free response');
+            answerBox.value = server_response.answer;
+            await this.pause(this.action_interval);
+          }
+        }
+        break;
+      case Highlighter.Question_Type.multipleChoice:
+        {
+          if (server_response.answer === undefined) {
+            throw 'Missing `answer` from server response.';
+          }
 
-      console.log('short answer');
+          console.log('multiple choice');
 
-      const answerBox = this.getShortAnswerInput(form);
-      if (answerBox) {
-        console.log('writing in short answer');
-        answerBox.value = server_response.answer;
-        await this.pause(this.action_interval);
-      }
+          /**
+           * - grab all the labels in the form
+           * - find the label that contains the value from server
+           * - click the input radio belonging to that label
+           */
+          const { matchedElement: label } = new InnerTextMatcher([...form.querySelectorAll('label')], [server_response.answer]).anyIncludesAny() ?? {};
+          const radio_buttons = label ? this.getRadioInputs(label) : [];
+          if (radio_buttons.length > 0) {
+            console.log('clicking multiple choice answer');
+            radio_buttons[0].click();
+            await this.pause(this.action_interval);
+          }
+        }
+        break;
     }
 
     this.assertNotAborting();
@@ -377,7 +415,7 @@ class Highlighter {
 
     if (this.getCheckboxInputs(form).length > 0) return Highlighter.Question_Type.checkbox;
     if (this.getDragItems(form).length > 0) return Highlighter.Question_Type.dragAndDrop;
-    if (this.getShortAnswerInput(form)) return Highlighter.Question_Type.freeResponse;
+    if (this.getFreeResponseInput(form)) return Highlighter.Question_Type.freeResponse;
     return Highlighter.Question_Type.multipleChoice;
   }
 
@@ -516,7 +554,7 @@ class Highlighter {
   }
 
   /** @param {HTMLElement} parentElement */
-  getShortAnswerInput(parentElement) {
+  getFreeResponseInput(parentElement) {
     log_call();
 
     const input = parentElement.querySelector('input[data-placeholder="Answer here"]');

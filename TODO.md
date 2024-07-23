@@ -16,6 +16,12 @@
 - ideally, would like to show individual processing steps, possibly with timer
 - able to do if wanted
 
+---
+
+### Rewrite TextMatcher for better efficiency
+
+- there are some TODO comments showing how it can be improved
+
 <br>
 <br>
 <br>

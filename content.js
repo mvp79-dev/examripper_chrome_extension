@@ -37,6 +37,24 @@ async function getAuthToken() {
   });
 }
 
+/**
+ * @typedef RequestData
+ * @property {string} auth_token
+ * @property {string=} quiz_title
+ * @property {string=} imgdata
+ * @property {string=} text
+ * @property {string=} session_id
+ * @property {boolean=} is_correct
+ */
+
+/**
+ * @typedef ResponseData
+ * @property {string} session_id
+ * @property {string=} answer
+ * @property {Record<string,string>=} answer_dictionary
+ * @property {string[]=} answer_list
+ */
+
 class Highlighter {
   //TODO: hook this up again
   static Analytics = {
@@ -275,22 +293,31 @@ class Highlighter {
   /**
    * @param {string} api_url
    * @param {string|undefined} quiz_title
-   * @param {object} specific_request_data
-   * @param {string=} specific_request_data.imgdata
-   * @param {string=} specific_request_data.text
-   * @param {string=} specific_request_data.session_id
-   * @param {boolean=} specific_request_data.is_correct
+   * @param {Partial<RequestData>} data
    */
-  async makeAPIRequest(api_url, quiz_title, specific_request_data) {
+  async makeAPIRequest(api_url, quiz_title, data) {
     const auth_token = await getAuthToken();
     if (auth_token === null || auth_token === undefined) {
       throw 'AuthToken is undefined.';
     }
+    /** @type {RequestData} */
     const request_data = {
-      authToken: auth_token,
-      quizTitle: quiz_title,
-      ...specific_request_data,
+      auth_token,
+      quiz_title,
+      imgdata: data.imgdata,
+      text: data.text,
+      session_id: data.session_id,
+      is_correct: data.is_correct,
     };
+
+    // remove keys that are undefined to save bandwidth
+    for (const key of Object.keys(request_data)) {
+      if (request_data[key] === undefined) {
+        delete request_data[key];
+      }
+    }
+
+    // ...specific_request_data,
     return await fetch(api_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -300,36 +327,45 @@ class Highlighter {
 
   /**
    * @memberof Highlighter
-   * @param {Record<string,unknown>} response_data
+   * @param {Partial<ResponseData>} response_data
    */
   sanitizeServerResponseData(response_data) {
-    /**
-     * @type {{
-     *  session_id: string;
-     *  answer?: string;
-     *  answer_dictionary?: Record<string,string>;
-     *  answer_list?: string[]
-     * }}
-     */
-    const result = {};
-    if (typeof response_data.id === 'string') {
-      result.session_id = response_data.id;
+    /** @type {ResponseData} */
+    const sanitized_data = {
+      session_id: '',
+      answer: undefined,
+      answer_dictionary: undefined,
+      answer_list: undefined,
+    };
+
+    if (typeof response_data.session_id !== 'string' || response_data.session_id === '') {
+      throw new ErrorNotFound('response_data.session_id');
     }
-    if (typeof response_data.answer === 'string') {
-      result.answer = response_data.answer;
+    sanitized_data.session_id = response_data.session_id;
+
+    if (response_data.answer !== undefined && typeof response_data.answer === 'string') {
+      sanitized_data.answer = response_data.answer;
     }
-    if (response_data.answer_dictionary && typeof response_data.answer_dictionary === 'object') {
-      result.answer_dictionary = {};
+
+    if (response_data.answer_dictionary !== undefined && typeof response_data.answer_dictionary === 'object' && response_data.answer_dictionary !== null) {
       for (const [key, value] of Object.entries(response_data.answer_dictionary)) {
-        if (typeof value === 'string') {
-          result.answer_dictionary[key] = value;
+        if (typeof key !== 'string' || typeof value !== 'string') {
+          throw new ErrorMalformed('response_data.session_id');
         }
       }
+      sanitized_data.answer_dictionary = response_data.answer_dictionary;
     }
-    if (Array.isArray(response_data.answer_list) && response_data.answer_list.every((value) => typeof value === 'string')) {
-      result.answer_list = response_data.answer_list;
+
+    if (response_data.answer_list !== undefined && Array.isArray(response_data.answer_list)) {
+      for (const value of response_data.answer_list) {
+        if (typeof value !== 'string') {
+          throw new ErrorMalformed('response_data.answer_list');
+        }
+      }
+      sanitized_data.answer_list = response_data.answer_list;
     }
-    return result;
+
+    return sanitized_data;
   }
 
   /**
@@ -668,15 +704,6 @@ class Highlighter {
     throw 'Abort';
   }
 
-  /** @param {Record<string,any>} obj */
-  deleteUndefinedKeys(obj) {
-    log_call();
-
-    for (const key in obj) {
-      if (obj[key] === undefined) delete obj[key];
-    }
-  }
-
   /**
    * Don't forget to `await` this call.
    * @param {number} duration_ms
@@ -869,6 +896,7 @@ class KVPairs {
   }
 }
 
+class ErrorMalformed extends Error {}
 class ErrorNotFound extends Error {}
 
 //

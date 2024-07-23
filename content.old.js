@@ -489,8 +489,7 @@ function findQuizTitle() {
 function findAnswerFeedback() {
   {
     // try a direct path to title
-    const selector =
-      'body > kp-app > kp-platform > kp-app-shell > mat-sidenav-container > mat-sidenav-content > kp-main > main > rt-activity-sia > kp-content-lane > div > form > kp-question-controls > div > div > div.feedback-wrap > div.feedback-body.active';
+    const selector = 'body > kp-app > kp-platform > kp-app-shell > mat-sidenav-container > mat-sidenav-content > kp-main > main > rt-activity-sia > kp-content-lane > div > form > kp-question-controls > div > div > div.feedback-wrap > div.feedback-body.active';
     const text = document.querySelector(selector)?.innerText;
     if (text) return text;
   }

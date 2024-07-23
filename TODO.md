@@ -1,14 +1,20 @@
-### More Detailed Status Indicator
+### 1. Rewrite API.md once more to reflect the new simpler api specification
 
-- ideally, would like to show individual processing steps, possibly with timer
-- almost ready
+- will do some other day
 
 ---
 
-### Resume on New Page Load
+### 2. Resume on New Page Load
 
 - for multipage assessments, restart process when a _new page_ is loaded
 - don't restart on _page refresh_
+
+---
+
+### 3. More Detailed Status Indicator
+
+- ideally, would like to show individual processing steps, possibly with timer
+- able to do if wanted
 
 <br>
 <br>

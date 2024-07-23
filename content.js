@@ -10,21 +10,18 @@ const BASE_URL = 'http://localhost:5500';
 // };
 
 const API_URLS = {
-  checkbox: BASE_URL + '',
-  dragAndDrop: BASE_URL + '',
-  freeResponse: BASE_URL + '',
-  multipleChoice: BASE_URL + '',
-  unknown: BASE_URL + '',
+  checkbox: BASE_URL + '/checkbox',
+  dragAndDrop: BASE_URL + '/drag-and-drop',
+  freeResponse: BASE_URL + '/free-response',
+  multipleChoice: BASE_URL + '/multiple-choice',
+  unknown: BASE_URL + '/unknown',
   validate: BASE_URL + '/validate',
 };
 
 const NOTABLE_FUNCTIONS = () => {
   // don't call this function
   const highlighter = new Highlighter(0);
-
   highlighter.process;
-  highlighter.sendFormDataToServer();
-  highlighter.sendAnswerFeedbackToServer();
 };
 
 async function getAuthToken() {
@@ -55,6 +52,7 @@ class Highlighter {
     dragAndDrop: 'dragAndDrop',
     freeResponse: 'freeResponse',
     multipleChoice: 'multipleChoice',
+    unknown: 'unknown',
   });
 
   // Add new states here.
@@ -98,174 +96,10 @@ class Highlighter {
 
     const form = this.getNextUnansweredQuestionForm();
     const question_type = this.getQuestionType(form);
-    const server_response = await this.sendFormDataToServer(form, question_type);
+    const quiz_title = this.findQuizTitle();
 
-    this.assertNotAborting();
-
-    switch (question_type) {
-      case Highlighter.Question_Type.checkbox:
-        {
-          if (server_response.answer_list === undefined) {
-            throw 'Missing `answer_list` from server response.';
-          }
-
-          console.log('checkboxes');
-
-          /**
-           * - grab a list of <label> elements within the <form> element
-           * - for each value sent back from the server:
-           * - > find the label that has the value
-           * - > get a list of the checkboxes for that label
-           * - > check the first one
-           */
-          const labels = [...form.querySelectorAll('label')];
-          for (const value of server_response.answer_list) {
-            const { matchedElement: label } = new InnerTextMatcher(labels, [value]).anyIncludesAny() ?? {};
-            const checkboxes = label ? this.getCheckboxInputs(label) : [];
-            if (checkboxes.length > 0) {
-              console.log('checking check box');
-              checkboxes[0].click();
-            }
-          }
-        }
-        break;
-      case Highlighter.Question_Type.dragAndDrop:
-        {
-          if (server_response.answer_dictionary === undefined) {
-            throw 'Missing `answer_dictionary` from server response.';
-          }
-
-          console.log('drag and drop');
-
-          /**
-           * - grab a list of the drag items and labels for drop targets in the form
-           * - for each key:value pair sent back from the server:
-           * - > find the drag item that contains the key
-           * - > find the label that contains the value
-           * - > find the closest drop target to that label
-           * - > simulate drag and drop
-           */
-          const drag_items = this.getDragItems(form);
-          const drop_labels = this.getDropLabels(form);
-          for (const [key, value] of Object.entries(server_response.answer_dictionary)) {
-            const { matchedElement: dragItem } = new InnerTextMatcher(drag_items, [key]).anyIncludesAny() ?? {};
-            // console.log('dragItem', dragItem);
-            if (dragItem) {
-              console.log(`First Item ID for key "${key}": ${dragItem.id}`);
-              const { matchedElement: dropLabel } = new InnerTextMatcher(drop_labels, [value]).anyIncludesAny() ?? {};
-              // console.log('dropText', dropLabel);
-              if (dropLabel) {
-                const dropTarget = this.getClosestDropTarget(dropLabel);
-                // console.log('dropTarget', dropTarget);
-                if (dropTarget) {
-                  console.log(`First Target ID for value "${value}": ${dropTarget.id}`);
-                  // do dragging and dropping stuff
-                  console.log('simulating drag and drop');
-                  DndSimulatorDataTransfer().simulate(dragItem, dropTarget);
-                  await this.pause(this.action_interval);
-                }
-              }
-            }
-          }
-        }
-        break;
-      case Highlighter.Question_Type.freeResponse:
-        {
-          if (server_response.answer === undefined) {
-            throw 'Missing `answer` from server response.';
-          }
-
-          console.log('free response');
-
-          /**
-           * - grab the free response input element
-           * - write value from server into value
-           */
-          const answerBox = this.getFreeResponseInput(form);
-          if (answerBox) {
-            console.log('writing in free response');
-            answerBox.value = server_response.answer;
-            await this.pause(this.action_interval);
-          }
-        }
-        break;
-      case Highlighter.Question_Type.multipleChoice:
-        {
-          if (server_response.answer === undefined) {
-            throw 'Missing `answer` from server response.';
-          }
-
-          console.log('multiple choice');
-
-          /**
-           * - grab all the labels in the form
-           * - find the label that contains the value from server
-           * - click the input radio belonging to that label
-           */
-          const { matchedElement: label } = new InnerTextMatcher([...form.querySelectorAll('label')], [server_response.answer]).anyIncludesAny() ?? {};
-          const radio_buttons = label ? this.getRadioInputs(label) : [];
-          if (radio_buttons.length > 0) {
-            console.log('clicking multiple choice answer');
-            radio_buttons[0].click();
-            await this.pause(this.action_interval);
-          }
-        }
-        break;
-    }
-
-    this.assertNotAborting();
-
-    console.log('looking for submit button');
-    const { matchedElement: submit_button } = new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['Submit']).anyIncludesAny() ?? {};
-    if (submit_button) {
-      console.log('submit_button.click()');
-      submit_button.click();
-      // wait long enough for server to process text
-      // should we wait for the Submit button's text to change?
-      // ideally, we would wait for the form's html to change a bit
-      await this.pause(1600);
-    }
-
-    this.assertNotAborting();
-
-    console.log('looking for feedback');
-    const feedbackSection = this.getFeedbackSection(form);
-    if (feedbackSection) {
-      const { matchedText } = new InnerTextMatcher([feedbackSection], ['Incorrect', 'Correct']).anyIncludesAny() ?? {};
-      if (matchedText === 'correct') {
-        await this.sendAnswerFeedbackToServer({ quiz_id: server_response.quiz_id, is_correct: true });
-      }
-      if (matchedText === 'incorrect') {
-        await this.sendAnswerFeedbackToServer({ quiz_id: server_response.quiz_id, is_correct: false });
-      }
-    }
-
-    this.assertNotAborting();
-
-    console.log('looking for next question button');
-    const { matchedElement: next_button } = new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['Next Question']).anyIncludesAny() ?? {};
-    console.log('buttons:', this.getButtons(form));
-    if (next_button) {
-      console.log('next_button.click()');
-      next_button.click();
-      await this.pause(this.action_interval);
-    }
-
-    console.log('looking for view summary button');
-    if (new TextMatcher(this.getButtons(form), ['innerText', 'value'], ['View Summary']).anyIncludesAny()) {
-      console.log('found view summary button. stopping');
-      this.stop();
-    }
-  }
-
-  /**
-   * @memberof Highlighter
-   * @param {HTMLFormElement} form
-   * @param {keyof Highlighter.Question_Type} question_type
-   */
-  async sendFormDataToServer(form, question_type) {
-    log_call();
-    this.assertNotAborting();
+    console.log('question_type:', question_type);
+    console.log('quiz_title:', quiz_title);
 
     const api_url = (function () {
       switch (question_type) {
@@ -281,25 +115,187 @@ class Highlighter {
       return API_URLS.unknown;
     })();
 
-    const authToken = (await getAuthToken()) ?? undefined;
-    if (authToken === undefined) {
-      throw 'AuthToken is undefined.';
+    const api_response = await this.makeAPIRequest(api_url, quiz_title, {
+      imgdata: await this.findImageData(form),
+      text: this.findQuestionText(form),
+    });
+
+    const {
+      session_id, //
+      answer,
+      answer_dictionary,
+      answer_list,
+    } = this.sanitizeServerResponseData(await api_response.json());
+
+    console.log('api_response:', {
+      session_id,
+      answer,
+      answer_dictionary,
+      answer_list,
+    });
+
+    this.assertNotAborting();
+
+    switch (question_type) {
+      case Highlighter.Question_Type.checkbox:
+        {
+          if (answer_list === undefined) throw 'Missing `answer_list` from server response.';
+          const labels = this.findMatchingLabels(form, answer_list);
+          const inputs = labels.map(({ label }) => this.findCheckboxInputs(label)[0]);
+          let found_count = 0;
+          for (const input of inputs) {
+            if (input) {
+              found_count += 1;
+              console.log('checking check box');
+              input.click();
+              await this.pause(this.action_interval);
+            }
+          }
+          if (found_count === 0) {
+            throw new ErrorNotFound(Highlighter.Question_Type.checkbox);
+          }
+        }
+        break;
+      case Highlighter.Question_Type.dragAndDrop:
+        {
+          if (answer_dictionary === undefined) throw 'Missing `answer_dictionary` from server response.';
+          const kv_pairs = new KVPairs(answer_dictionary);
+          const drag_items = this.findMatchingDragItems(form, kv_pairs.keys);
+          const drop_targets = this.findMatchingDropTargets(form, kv_pairs.values);
+          let found_count = 0;
+          for (let i = 0; i < kv_pairs.length; i++) {
+            const { value: key, drag_item } = drag_items[i];
+            const { value, drop_target } = drop_targets[i];
+            console.log(`${key}:${value}`, drag_item, drop_target);
+            console.log('drag item:', drag_item);
+            console.log('drop target:', drop_target);
+            if (drag_item && drop_target) {
+              found_count += 1;
+              console.log('simulating drag and drop');
+              DndSimulatorDataTransfer().simulate(drag_item, drop_target);
+              await this.pause(this.action_interval);
+            }
+          }
+          if (found_count === 0) {
+            throw new ErrorNotFound(Highlighter.Question_Type.dragAndDrop);
+          }
+        }
+        break;
+      case Highlighter.Question_Type.freeResponse:
+        {
+          if (answer === undefined) throw 'Missing `answer` from server response.';
+          const input = this.findFreeResponseInput(form);
+          if (input) {
+            console.log('writing in free response answer');
+            input.value = answer;
+            await this.pause(this.action_interval);
+          } else {
+            throw new ErrorNotFound(Highlighter.Question_Type.freeResponse);
+          }
+        }
+        break;
+      case Highlighter.Question_Type.multipleChoice:
+        {
+          if (answer === undefined) throw 'Missing `answer` from server response.';
+          const label = this.findMatchingLabel(form, answer);
+          const inputs = label ? this.findRadioInputs(label) : [];
+          if (inputs[0]) {
+            console.log('clicking multiple choice answer');
+            inputs[0].click();
+            await this.pause(this.action_interval);
+          } else {
+            throw new ErrorNotFound(Highlighter.Question_Type.multipleChoice);
+          }
+        }
+        break;
     }
 
-    const request_data = {
-      authToken: authToken,
-      quizTitle: this.getQuizTitle(),
-      imgdata: await this.getImageData(form),
-      text: this.getQuestionText(form),
-    };
+    await this.clickSubmitButton(form);
 
-    const response = await fetch(api_url, {
+    // wait long enough for server to process text
+    // should we wait for the Submit button's text to change?
+    // ideally, we would wait for the form's html to change a bit
+    await this.pause(1000);
+
+    // send feedback to server
+    const { is_correct } = this.findQuestionFeedback(form);
+    if (is_correct !== undefined) {
+      await this.makeAPIRequest(API_URLS.validate, quiz_title, { session_id, is_correct });
+    } else {
+      //TODO: there's really no other reliable way to check if the website is unresponsive
+      if (this.findNextButton(form) === undefined && this.findViewSummaryButton(form) === undefined) {
+        // just in case, we check to see if the submit button changed to the next button or the view summary button.
+        // if not, i think we can safely say something is wrong with the page
+        throw new ErrorNotFound('feedback');
+      }
+    }
+
+    await this.clickNextButton(form);
+
+    if (this.findViewSummaryButton(form)) {
+      this.stop();
+    }
+  }
+
+  /** @memberof Highlighter */
+  start() {
+    log_call();
+
+    Highlighter.UpdateStatus('Running');
+    const self = this;
+    (async function loop() {
+      console.log('');
+      console.log('');
+      console.log('');
+      try {
+        self.assertNotAborting();
+        await self.process();
+        setTimeout(() => loop(), self.action_interval);
+      } catch (error) {
+        Highlighter.UpdateStatus('Ready');
+        if (error instanceof ErrorNotFound) {
+          console.log('ErrorNotFound:', error.message);
+        } else if (error === 'Abort') {
+          console.log('Abort');
+        } else {
+          console.log('Error:', error);
+        }
+      }
+    })();
+  }
+
+  /** @memberof Highlighter */
+  stop() {
+    log_call();
+
+    Highlighter.UpdateStatus('Stopping');
+    this.abort = true;
+  }
+
+  /**
+   * @param {string} api_url
+   * @param {string|undefined} quiz_title
+   * @param {object} specific_request_data
+   * @param {string=} specific_request_data.imgdata
+   * @param {string=} specific_request_data.text
+   * @param {string=} specific_request_data.session_id
+   * @param {boolean=} specific_request_data.is_correct
+   */
+  async makeAPIRequest(api_url, quiz_title, specific_request_data) {
+    const auth_token = await getAuthToken();
+    if (auth_token === null || auth_token === undefined) {
+      throw 'AuthToken is undefined.';
+    }
+    const request_data = {
+      authToken: auth_token,
+      quizTitle: quiz_title,
+      ...specific_request_data,
+    };
+    return await fetch(api_url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request_data),
     });
-
-    return this.sanitizeServerResponseData(await response.json());
   }
 
   /**
@@ -309,18 +305,15 @@ class Highlighter {
   sanitizeServerResponseData(response_data) {
     /**
      * @type {{
-     *  quiz_id: string;
+     *  session_id: string;
      *  answer?: string;
      *  answer_dictionary?: Record<string,string>;
      *  answer_list?: string[]
      * }}
      */
-    const result = {
-      quiz_id: '',
-    };
-
+    const result = {};
     if (typeof response_data.id === 'string') {
-      result.quiz_id = response_data.id;
+      result.session_id = response_data.id;
     }
     if (typeof response_data.answer === 'string') {
       result.answer = response_data.answer;
@@ -343,86 +336,39 @@ class Highlighter {
    * @memberof Highlighter
    * @param {HTMLFormElement} form
    */
-  getFormData(form) {
-    const form_data = new FormData(form);
-    const pojo = /** @type {Record<string,FormDataEntryValue>} */ ({});
-    for (const [key, value] of form_data) {
-      pojo[key] = value;
+  async clickSubmitButton(form) {
+    this.assertNotAborting();
+    const { matchedElement: submit_button } = new TextMatcher(this.findButtons(form), ['innerText', 'value'], ['Submit']).anyIncludesAny() ?? {};
+    if (submit_button) {
+      submit_button.click();
+      await this.pause(this.action_interval);
     }
-    return pojo;
   }
 
   /**
    * @memberof Highlighter
-   * @param {object} params
-   * @param {string} params.quiz_id
-   * @param {boolean} params.is_correct
+   * @param {HTMLFormElement} form
    */
-  async sendAnswerFeedbackToServer({ quiz_id, is_correct }) {
-    log_call();
+  async clickNextButton(form) {
     this.assertNotAborting();
-
-    const authToken = await getAuthToken();
-    if (authToken === null || authToken === undefined) throw 'AuthToken is null.';
-
-    const request_data = {
-      authToken: authToken,
-      quizTitle: this.getQuizTitle(),
-      id: quiz_id,
-      isCorrect: is_correct,
-    };
-    this.deleteUndefinedKeys(request_data);
-
-    const response = await fetch(API_URLS.validate, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request_data),
-    });
-    return await response.json();
+    const next_button = this.findNextButton(form);
+    if (next_button) {
+      next_button.click();
+      await this.pause(this.action_interval);
+    }
   }
 
-  /** @memberof Highlighter */
-  start() {
-    log_call();
-
-    Highlighter.UpdateStatus('Running');
-
-    const self = this;
-    (async function loop() {
-      console.log('');
-      console.log('');
-      console.log('');
-      try {
-        self.assertNotAborting();
-        await self.process();
-        setTimeout(() => loop(), self.action_interval);
-      } catch (error) {
-        Highlighter.UpdateStatus('Ready');
-        if (error === 'Abort') {
-          console.log('Abort');
-        } else {
-          console.log('Error:', error);
-        }
-      }
-    })();
-  }
-
-  /** @memberof Highlighter */
-  stop() {
-    log_call();
-
-    Highlighter.UpdateStatus('Stopping');
-    this.abort = true;
-  }
+  // 'get' functions must return valid values or throw an error
 
   /** @param {HTMLFormElement} form */
   getQuestionType(form) {
     log_call();
 
-    if (this.getCheckboxInputs(form).length > 0) return Highlighter.Question_Type.checkbox;
-    if (this.getDragItems(form).length > 0) return Highlighter.Question_Type.dragAndDrop;
-    if (this.getFreeResponseInput(form)) return Highlighter.Question_Type.freeResponse;
-    return Highlighter.Question_Type.multipleChoice;
+    if (this.findCheckboxInputs(form).length > 0) return Highlighter.Question_Type.checkbox;
+    if (this.findDragItems(form).length > 0) return Highlighter.Question_Type.dragAndDrop;
+    if (this.findFreeResponseInput(form)) return Highlighter.Question_Type.freeResponse;
+    if (this.findRadioInputs(form)) return Highlighter.Question_Type.multipleChoice;
+    return Highlighter.Question_Type.unknown;
   }
 
   /** @memberof Highlighter */
@@ -430,11 +376,10 @@ class Highlighter {
     log_call();
 
     for (const form of document.querySelectorAll('form')) {
-      const feedback = this.getFeedbackSection(form);
-      if (feedback && new InnerTextMatcher([feedback], ['Incorrect', 'Correct']).anyIncludesAny()) {
+      if (this.findQuestionFeedback(form).is_correct !== undefined) {
         continue; // skip this form
       }
-      const buttons = this.getButtons(form);
+      const buttons = this.findButtons(form);
       if (buttons.length === 0) {
         continue; // skip this form
       }
@@ -442,7 +387,6 @@ class Highlighter {
       if (new TextMatcher(buttons, ['innerText', 'value'], ['Next Question', 'View Summary']).anyIncludesAny()) {
         continue; // skip this form
       }
-
       // search for "Question ... of"
       if (new InnerTextMatcher([form], ['Question', 'of']).anyIncludesEachInOrder()) {
         // search for "Submit" button
@@ -451,12 +395,13 @@ class Highlighter {
         }
       }
     }
-
     throw 'No unanswered questions found.';
   }
 
+  // 'find' functions may return empty array or undefined
+
   /** @param {HTMLElement} parentElement */
-  getButtons(parentElement) {
+  findButtons(parentElement) {
     log_call();
 
     const list = [];
@@ -470,7 +415,7 @@ class Highlighter {
   }
 
   /** @param {HTMLElement} parentElement */
-  getCheckboxInputs(parentElement) {
+  findCheckboxInputs(parentElement) {
     log_call();
 
     const list = [];
@@ -483,24 +428,26 @@ class Highlighter {
   }
 
   /** @param {HTMLElement} parentElement */
-  getClosestDropTarget(parentElement) {
+  findClosestDropTarget(parentElement) {
     log_call();
 
     const closest = parentElement.closest('kp-drop-target');
-    if (closest) return closest;
+    if (closest instanceof HTMLElement) return closest;
     let current_element = parentElement;
     while (current_element.parentElement) {
       current_element = current_element.parentElement;
       const potential_targets = current_element.querySelectorAll('kp-drop-target');
-      if (potential_targets.length > 0) {
-        return potential_targets[0];
+      for (const potential_target of potential_targets) {
+        if (potential_target instanceof HTMLElement) {
+          return potential_target;
+        }
       }
     }
     return undefined;
   }
 
   /** @param {HTMLElement} parentElement */
-  getDragItems(parentElement) {
+  findDragItems(parentElement) {
     log_call();
 
     const list = [];
@@ -513,7 +460,7 @@ class Highlighter {
   }
 
   /** @param {HTMLElement} parentElement */
-  getDropLabels(parentElement) {
+  findDropLabels(parentElement) {
     log_call();
 
     const list = [];
@@ -526,41 +473,7 @@ class Highlighter {
   }
 
   /** @param {HTMLElement} parentElement */
-  getImages(parentElement) {
-    log_call();
-
-    const list = [];
-    list.push(...parentElement.querySelectorAll('img'));
-    list.push(...parentElement.querySelectorAll('svg'));
-    return list;
-  }
-
-  /** @param {HTMLElement} parentElement */
-  getFeedbackSection(parentElement) {
-    log_call();
-
-    const feedbackSection = parentElement.querySelector('kp-question-controls');
-    if (feedbackSection instanceof HTMLElement) {
-      return feedbackSection;
-    }
-    return undefined;
-  }
-
-  /** @param {HTMLElement} parentElement */
-  getRadioInputs(parentElement) {
-    log_call();
-
-    const list = [];
-    for (const input of parentElement.querySelectorAll('input')) {
-      if (input.type.toLowerCase() === 'radio') {
-        list.push(input);
-      }
-    }
-    return list;
-  }
-
-  /** @param {HTMLElement} parentElement */
-  getFreeResponseInput(parentElement) {
+  findFreeResponseInput(parentElement) {
     log_call();
 
     const input = parentElement.querySelector('input[data-placeholder="Answer here"]');
@@ -574,24 +487,127 @@ class Highlighter {
    * @memberof Highlighter
    * @param {HTMLFormElement} form
    */
-  async getImageData(form) {
+  async findImageData(form) {
     log_call();
 
-    if (this.getImages(form).length > 0) {
+    if (this.findImages(form).length > 0) {
       // @ts-ignore
       const canvas = await html2canvas(form, { useCORS: true, allowTaint: false });
-      console.log('canvas:', canvas);
-      const dataURL = canvas.toDataURL('image/png');
-      console.log('dataURL:', dataURL);
-      if (dataURL !== undefined && dataURL !== null && dataURL !== '') {
-        return dataURL;
+      if (canvas instanceof HTMLCanvasElement) {
+        const dataURL = canvas.toDataURL('image/png');
+        if (dataURL !== '') {
+          return dataURL;
+        }
       }
     }
     return undefined;
   }
 
+  /** @param {HTMLElement} parentElement */
+  findImages(parentElement) {
+    log_call();
+
+    const list = [];
+    list.push(...parentElement.querySelectorAll('img'));
+    list.push(...parentElement.querySelectorAll('svg'));
+    return list;
+  }
+
+  /**
+   * @memberof Highlighter
+   * @param {HTMLFormElement} form
+   * @param {string} value
+   */
+  findMatchingLabel(form, value) {
+    const { matchedElement: label } = new InnerTextMatcher([...form.querySelectorAll('label')], [value]).anyIncludesAny() ?? {};
+    return label;
+  }
+
+  /**
+   * @memberof Highlighter
+   * @param {HTMLFormElement} form
+   * @param {string[]} values
+   */
+  findMatchingLabels(form, values) {
+    log_call();
+
+    //TODO this is why TextMatcher needs to be refactored
+    const list = [];
+    const labels = [...form.querySelectorAll('label')];
+    for (const value of values) {
+      const { matchedElement: label } = new InnerTextMatcher(labels, [value]).anyIncludesAny() ?? {};
+      if (label) {
+        list.push({ value, label });
+      }
+    }
+    return list;
+  }
+
+  /**
+   * @memberof Highlighter
+   * @param {HTMLElement} parentElement
+   * @param {string[]} values
+   */
+  findMatchingDragItems(parentElement, values) {
+    log_call();
+
+    //TODO this is why TextMatcher needs to be refactored
+    const list = [];
+    const drag_items = this.findDragItems(parentElement);
+    for (const value of values) {
+      const { matchedElement: drag_item } = new InnerTextMatcher(drag_items, [value]).anyIncludesAny() ?? {};
+      list.push({ value, drag_item });
+    }
+    return list;
+  }
+
+  /**
+   * @memberof Highlighter
+   * @param {HTMLElement} parentElement
+   * @param {string[]} values
+   */
+  findMatchingDropTargets(parentElement, values) {
+    log_call();
+
+    //TODO this is why TextMatcher needs to be refactored
+    const list = [];
+    const drop_labels = this.findDropLabels(parentElement);
+    for (const value of values) {
+      const { matchedElement: drop_label } = new InnerTextMatcher(drop_labels, [value]).anyIncludesAny() ?? {};
+      const drop_target = drop_label ? this.findClosestDropTarget(drop_label) : undefined;
+      list.push({ value, drop_target });
+    }
+    return list;
+  }
+
+  /**
+   * @memberof Highlighter
+   * @param {HTMLElement} parentElement
+   */
+  findNextButton(parentElement) {
+    const { matchedElement: next_button } = new TextMatcher(this.findButtons(parentElement), ['innerText', 'value'], ['Next Question']).anyIncludesAny() ?? {};
+    return next_button;
+  }
+
+  /** @param {HTMLElement} parentElement */
+  findQuestionFeedback(parentElement) {
+    log_call();
+
+    const element = parentElement.querySelector('kp-question-controls');
+    if (element instanceof HTMLElement) {
+      const { matchedText } = new InnerTextMatcher([element], ['Incorrect', 'Correct']).anyIncludesAny() ?? {};
+      if (matchedText === 'correct') {
+        return { is_correct: true };
+      }
+      if (matchedText === 'incorrect') {
+        return { is_correct: false };
+      }
+    }
+    return {};
+  }
+
   /** @param {HTMLFormElement} form */
-  getQuestionText(form) {
+  findQuestionText(form) {
     log_call();
 
     const innerText = form.innerText.trim();
@@ -601,7 +617,7 @@ class Highlighter {
     return undefined;
   }
 
-  getQuizTitle() {
+  findQuizTitle() {
     log_call();
 
     const selector_list = [
@@ -610,15 +626,35 @@ class Highlighter {
       // possible class
       '.toolbar-title-wrapper',
     ];
-
     for (const selector of selector_list) {
       const element = document.querySelector(selector);
       if (element instanceof HTMLElement && element.innerText !== '') {
         return element.innerText;
       }
     }
-
     return undefined;
+  }
+
+  /** @param {HTMLElement} parentElement */
+  findRadioInputs(parentElement) {
+    log_call();
+
+    const list = [];
+    for (const input of parentElement.querySelectorAll('input')) {
+      if (input.type.toLowerCase() === 'radio') {
+        list.push(input);
+      }
+    }
+    return list;
+  }
+
+  /**
+   * @memberof Highlighter
+   * @param {HTMLElement} parentElement
+   */
+  findViewSummaryButton(parentElement) {
+    const { matchedElement } = new TextMatcher(this.findButtons(parentElement), ['innerText', 'value'], ['View Summary']).anyIncludesAny() ?? {};
+    return matchedElement;
   }
 
   /**
@@ -804,6 +840,36 @@ class InnerTextMatcher extends TextMatcher {
     super(element_list, ['innerText'], match_list, case_sensitive);
   }
 }
+
+class KVPairs {
+  /** @type {{key:string,value:any}[]} */
+  data = [];
+  /**
+   * @memberof KVPairs
+   * @param {*} o
+   */
+  constructor(o) {
+    if (typeof o === 'object') {
+      for (const [key, value] of Object.entries(o)) {
+        this.data.push({ key, value });
+      }
+    }
+  }
+  get length() {
+    return this.data.length;
+  }
+  get entries() {
+    return this.data;
+  }
+  get keys() {
+    return this.data.map(({ key }) => key);
+  }
+  get values() {
+    return this.data.map(({ value }) => value);
+  }
+}
+
+class ErrorNotFound extends Error {}
 
 //
 //

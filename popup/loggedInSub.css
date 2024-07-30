@@ -1,37 +1,77 @@
+/* loggedInSub.css */
 body {
-  font-family: 'Open Sans', sans-serif;
-  background-color: #2f2f2f; /* Dark Grey */
-  color: #c1c1c1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 300px; /* Adjust height as needed */
+  font-family: "Poppins", sans-serif;
+  background-color: #1d1c1cff;
+  color: #a99dfaff;
+  text-align: center;
   margin: 0;
+  padding: 10px;
+  font-size: 16px;
 }
 
 .container {
-  text-align: center;
-  padding: 20px; /* Added padding */
-  width: 250px; /* Adjust width as needed */
+  margin: auto;
+  padding: 20px;
+  background-color: #2b292eff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  min-width: 350px;
+  position: relative;
+  overflow: hidden;
+}
+
+.container::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, #7d7898ff, #a99dfaff);
+  animation: gradient 10s ease infinite;
+  z-index: -1;
+}
+
+@keyframes gradient {
+  0% {
+    transform: translate(0%, 0%);
+  }
+  50% {
+    transform: translate(50%, 50%);
+  }
+  100% {
+    transform: translate(0%, 0%);
+  }
 }
 
 .logo {
-  width: 50px; /* Adjust size as needed */
-  height: 50px;
-  margin-bottom: 15px; /* Adjust margin as needed */
+  height: 60px;
+  margin: 10px auto;
+  display: block;
+  animation: pulse 2s infinite;
 }
 
-h1 {
-  font-size: 22px; /* Adjust font size as needed */
-  margin: 15px 0; /* Adjust margin as needed */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
+h1,
 p {
-  font-size: 16px; /* Adjust font size as needed */
-  margin: 10px 0; /* Adjust margin as needed */
+  font-weight: 600;
+  margin: 10px 0;
+  color: #a99dfaff;
 }
 
 .subscriber-status {
-  color: #00ff00; /* Green color for active subscriber */
-  font-weight: bold;
+  color: #7d7898ff;
+  margin-bottom: 15px;
 }

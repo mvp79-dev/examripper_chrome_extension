@@ -12,6 +12,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="/popup/examripper.js" defer></script>
 
     <style>
@@ -266,6 +267,99 @@
         align-items: center;
         gap: 10px;
       }
+      .subject-selection {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+      }
+      
+      .subject-selection input[type="radio"] {
+        display: none;
+      }
+      
+      .subject-selection label {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #7d7898ff;
+        color: #e0e0e0;
+        cursor: pointer;
+        transition: background-color 0.3s, transform 0.3s;
+        border-right: 1px solid #1d1c1cff;
+        margin: 0; /* Added this to remove any gap */
+      }
+      
+      .subject-selection label:first-child {
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 5px;
+      }
+      
+      .subject-selection label:last-child {
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 5px;
+        border-right: none;
+      }
+      
+      .subject-selection input[type="radio"]:checked + label {
+        background-color: #a99dfaff;
+        color: #1d1c1cff;
+        transform: scale(1.1);
+      }
+      
+      .radio-container {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        border: 3px solid #a99dfaff;
+        border-radius: 8px;
+        background: #1d1c1cff;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      .radio-container input[type="radio"] {
+        display: none;
+      }
+      
+      .radio-container label {
+        flex: 1;
+        padding: 10px;
+        text-align: center;
+        background: #2b292eff;
+        cursor: pointer;
+        color: #a99dfaff;
+        transition: background 0.3s;
+        margin: 0; /* Added this to remove any gap */
+      }
+      
+      .radio-container input[type="radio"]:checked + label {
+        background: #a99dfaff;
+        color: #1d1c1cff;
+      }
+      
+      .radio-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 20%;
+        background: #a99dfaff;
+        transition: transform 0.3s;
+        transform: translateX(-100%);
+      }
+      
+      .radio-container input[type="radio"]:checked ~ ::before {
+        transform: translateX(calc((100% / 5) * (var(--i) - 1)));
+      }
+      
+      .radio-container #history:checked ~ ::before { --i: 1; }
+      .radio-container #science:checked ~ ::before { --i: 2; }
+      .radio-container #english:checked ~ ::before { --i: 3; }
+      .radio-container #math:checked ~ ::before { --i: 4; }
+      .radio-container #spanish:checked ~ ::before { --i: 5; }
+      
     </style>
   </head>
   <body>
@@ -273,6 +367,19 @@
       <img src="../icons/icon128.png" alt="Logo" class="logo" />
       <h1>Exam Loaded</h1>
       <p class="status-message">Ready to start your exam</p>
+      <div class="radio-container">
+        <input type="radio" id="history" name="subject" value="History">
+        <label for="history">History</label>
+        <input type="radio" id="science" name="subject" value="Science">
+        <label for="science">Science</label>
+        <input type="radio" id="english" name="subject" value="English">
+        <label for="english">English</label>
+        <input type="radio" id="math" name="subject" value="Math">
+        <label for="math">Math</label>
+        <input type="radio" id="spanish" name="subject" value="Spanish">
+        <label for="spanish">Spanish</label>
+      </div>
+      
       <div class="slider-container">
         <label for="action-interval-slider">
           Action Interval Duration:
@@ -352,7 +459,7 @@
     
     // Developers can now easily call these functions:
     progressController.startSolving(); // To start the solving process
-    progressController.incrementStep(); // To move to the next step
+    
     progressController.incrementStep(); // To move to the next step
     progressController.incrementStep(); // To move to the next step
     // When the last step is incremented, it automatically marks as solved.);

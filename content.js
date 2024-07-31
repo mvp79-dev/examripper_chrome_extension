@@ -291,6 +291,32 @@ class Highlighter {
   }
 
   /**
+ * @memberof Highlighter
+ * @param {HTMLElement} element
+ * @returns {Promise<number | undefined>} Returns a Promise that resolves to the last number found or undefined if not found.
+ * this function just gets the number of questions on the quiz.
+ */
+  async findLastNumber(element) {
+  log_call();
+
+  // Using querySelector to select the first element with the class 'sia-question-number'
+  const targetElement = element.querySelector('.sia-question-number');
+
+  if (targetElement) {
+    const content = targetElement.textContent;
+    const match = content.match(/\d+$/);
+
+    if (match) {
+      const lastNumber = parseInt(match[0], 10);
+      console.log(lastNumber); // Optional: log the number
+      return lastNumber;
+    }
+  }
+
+  return undefined;
+  }
+
+  /**
    * @param {string} api_url
    * @param {string|undefined} quiz_title
    * @param {Partial<RequestData>} data

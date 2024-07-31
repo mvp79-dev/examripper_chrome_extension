@@ -83,7 +83,10 @@ class Highlighter {
   static RuntimeConnected = true;
   static Status = /** @type {keyof Highlighter.Status_Type} */ (Highlighter.Status_Type.Ready);
 
-  /** @param {keyof Highlighter.Status_Type} new_status */
+  /** 
+   * @param {keyof Highlighter.Status_Type} new_status
+   * @param 
+   */
   static UpdateStatus(new_status) {
     log_call();
 
@@ -114,7 +117,7 @@ class Highlighter {
 
     const form = this.getNextUnansweredQuestionForm();
     const question_type = this.getQuestionType(form);
-    const quiz_title = this.findQuizTitle();
+    const quiz_title = Highlighter.findQuizTitle();
 
     console.log('question_type:', question_type);
     console.log('quiz_title:', quiz_title);
@@ -296,7 +299,7 @@ class Highlighter {
  * @returns {Promise<number | undefined>} Returns a Promise that resolves to the last number found or undefined if not found.
  * this function just gets the number of questions on the quiz.
  */
-  async findLastNumber(element) {
+  async findTotalQuestions(element) {
   log_call();
 
   // Using querySelector to select the first element with the class 'sia-question-number'
@@ -679,7 +682,7 @@ class Highlighter {
     return undefined;
   }
 
-  findQuizTitle() {
+  static findQuizTitle() {
     log_call();
 
     const selector_list = [
@@ -1267,6 +1270,9 @@ function BeforeUnloadHandler() {
   Highlighter.UpdateStatus('Ready');
 }
 
+
+
+
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) {
     // This page was restored from the bfcache.
@@ -1281,6 +1287,11 @@ window.addEventListener('pageshow', (event) => {
       switch (message.action) {
         case 'getStatus': {
           sendResponse({ status: Highlighter.Status });
+          break;
+        }
+        case "getQuizTitle": {
+          console.log('Sending Quiz Title:', Highlighter.findQuizTitle());
+          sendResponse({ quiz_title: Highlighter.findQuizTitle() });
           break;
         }
         case 'startHighlighting': {

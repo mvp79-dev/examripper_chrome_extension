@@ -2,7 +2,24 @@ console.log('examripper.js loaded');
 
 const intervalSlider = /** @type{HTMLInputElement} */ (document.getElementById('action-interval-slider'));
 const sliderCurrentValue = /** @type{HTMLSpanElement} */ (document.getElementById('current-value'));
-const actionButton = /** @type{HTMLButtonElement} */ (document.getElementById('action-button'));
+const actionButton = /** @type{HTMLButtonElement} */ (document.getElementById('start-button'));
+const quizTitle = /** @type{HTMLSpanElement} */ (document.getElementById('quiz-title'));
+
+function setQuizName() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]?.id) {
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'getQuizTitle' }, function (response) {
+        if (response && response.quiz_title) {
+          console.log('Quiz Title:', response.quiz_title);
+          const quizName = response.quiz_title;
+          quizTitle.innerText = quizName;
+        } else {
+          console.log('Failed to get quiz title');
+        }
+      });
+    }
+  });
+}
 
 try {
   if (!(intervalSlider instanceof HTMLInputElement)) throw 'intervalSlider not HTMLInputElement';
@@ -16,9 +33,10 @@ try {
         updateButtons(message.status);
         break;
       }
+      
     }
   });
-
+  setQuizName();
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]?.id) {
       console.log('chrome.tabs.sendMessage, getStatus');
@@ -66,6 +84,8 @@ try {
   console.log('Error:', error);
 }
 
+
+
 /**
  * @param {'Ready'|'Running'|'Stopping'} status
  */
@@ -94,3 +114,5 @@ function updateSliderValue() {
   const value = parseFloat(intervalSlider.value);
   sliderCurrentValue.innerText = value.toFixed(2) + 's'; // Update to show 2 decimal points for consistency
 }
+
+

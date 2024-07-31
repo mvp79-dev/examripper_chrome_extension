@@ -5,6 +5,64 @@ const sliderCurrentValue = /** @type{HTMLSpanElement} */ (document.getElementByI
 const actionButton = /** @type{HTMLButtonElement} */ (document.getElementById('start-button'));
 const quizTitle = /** @type{HTMLSpanElement} */ (document.getElementById('quiz-title'));
 
+class ProgressController {
+  constructor(totalSteps) {
+      this.totalSteps = totalSteps;
+      this.currentStep = 0;
+      this.startButton = document.getElementById('start-button');
+      this.progressBar = document.getElementById('progress-bar');
+      this.buttonText = document.getElementById('button-text');
+      this.stopButton = document.querySelector('.stop-button');
+  }
+
+  startSolving() {
+      this.startButton.classList.add('solving-button');
+      this.buttonText.innerHTML = 'Solving...';
+      this.stopButton.style.display = 'block';
+      this.updateProgressBar();
+  }
+
+  incrementStep() {
+      if (this.currentStep < this.totalSteps) {
+          this.currentStep++;
+          this.updateProgressBar();
+          if (this.currentStep === this.totalSteps) {
+              this.markAsSolved();
+          }
+      }
+  }
+
+  setStep(stepNumber) {
+      if (stepNumber >= 0 && stepNumber <= this.totalSteps) {
+          this.currentStep = stepNumber;
+          this.updateProgressBar();
+          if (this.currentStep === this.totalSteps) {
+              this.markAsSolved();
+          } else {
+              this.startButton.classList.remove('solved-button');
+              this.startButton.classList.add('solving-button');
+              this.buttonText.innerHTML = 'Solving...';
+              this.stopButton.style.display = 'block';
+          }
+      } else {
+          console.error('Invalid step number');
+      }
+  }
+
+  markAsSolved() {
+      this.startButton.classList.remove('solving-button');
+      this.startButton.classList.add('solved-button');
+      this.buttonText.innerHTML = '<i class="fas fa-check icon"></i> Solved';
+      this.progressBar.style.width = '100%';
+      this.stopButton.style.display = 'none';
+  }
+
+  updateProgressBar() {
+      const progress = (this.currentStep / this.totalSteps) * 100;
+      this.progressBar.style.width = `${progress}%`;
+  }
+}
+
 function setQuizName() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]?.id) {
@@ -21,10 +79,28 @@ function setQuizName() {
   });
 }
 
+function getTotalQuestions() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]?.id) {
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'getTotalQuestions' }, function (response) {
+        if (response && response.total_questions) {
+          console.log('Total Questions:', response.total_questions);
+          return response.total_questions;
+        } else {
+          console.log('Failed to get total questions');
+        }
+      });
+    }
+  });
+}
+
+
+
 try {
   if (!(intervalSlider instanceof HTMLInputElement)) throw 'intervalSlider not HTMLInputElement';
   if (!(sliderCurrentValue instanceof HTMLSpanElement)) throw 'sliderCurrentValue not HTMLSpanElement';
   if (!(actionButton instanceof HTMLButtonElement)) throw 'startButton not HTMLButtonElement';
+  let progress;
 
   chrome.runtime.onMessage.addListener((message) => {
     console.log('onMessage:', message);
@@ -79,7 +155,7 @@ try {
   });
 
   updateSliderValue();
-  updateButtons('Ready');
+  
 } catch (error) {
   console.log('Error:', error);
 }
@@ -87,26 +163,29 @@ try {
 
 
 /**
- * @param {'Ready'|'Running'|'Stopping'} status
+ * @param {'Ready'|'Start'|'Incriment'|'Stop'} status
+ * @param {ProgressController} controller
+ * @param {number} steps
+ * @param {number} currentStep
  */
-async function updateButtons(status) {
+
+async function updateButtons(status, controller, steps=0, currentStep=0) {
   console.log('updateButtons:', status);
   switch (status) {
     case 'Ready':
-      actionButton.classList.remove('stop-button');
-      actionButton.classList.add('start-button');
-      actionButton.innerText = 'Start';
+      controller = new ProgressController(steps);
+      return controller;
+    case 'Stop':
+      controller.markAsSolved();
+      
       break;
-    case 'Stopping':
-      actionButton.classList.add('stop-button');
-      actionButton.classList.remove('start-button');
-      actionButton.innerText = 'Stopping...';
-      break;
-    default: {
-      actionButton.classList.add('stop-button');
-      actionButton.classList.remove('start-button');
-      actionButton.innerText = 'Stop';
+    case "Start": {
+      controller = new ProgressController(steps);
+      controller.startSolving
     }
+    case 'Incriment':
+      progress.incrementStep();
+      break;
   }
 }
 
@@ -116,3 +195,9 @@ function updateSliderValue() {
 }
 
 
+
+
+
+
+// To set directly to a specific step
+// When the last step is incremented, it automatically marks as solved.

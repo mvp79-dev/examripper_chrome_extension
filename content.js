@@ -293,31 +293,7 @@ class Highlighter {
     this.abort = true;
   }
 
-  /**
- * @memberof Highlighter
- * @param {HTMLElement} element
- * @returns {Promise<number | undefined>} Returns a Promise that resolves to the last number found or undefined if not found.
- * this function just gets the number of questions on the quiz.
- */
-  async findTotalQuestions(element) {
-  log_call();
-
-  // Using querySelector to select the first element with the class 'sia-question-number'
-  const targetElement = element.querySelector('.sia-question-number');
-
-  if (targetElement) {
-    const content = targetElement.textContent;
-    const match = content.match(/\d+$/);
-
-    if (match) {
-      const lastNumber = parseInt(match[0], 10);
-      console.log(lastNumber); // Optional: log the number
-      return lastNumber;
-    }
-  }
-
-  return undefined;
-  }
+  
 
   /**
    * @param {string} api_url
@@ -699,6 +675,25 @@ class Highlighter {
     }
     return undefined;
   }
+  static findTotalQuestions() {
+    log_call();
+  
+    // Using querySelector to select the first element with the class 'sia-question-number'
+    const targetElement = element.querySelector('.sia-question-number');
+  
+    if (targetElement) {
+      const content = targetElement.textContent;
+      const match = content.match(/\d+$/);
+  
+      if (match) {
+        const lastNumber = parseInt(match[0], 10);
+        console.log(lastNumber); // Optional: log the number
+        return lastNumber;
+      }
+    }
+  
+    return undefined;
+    }
 
   /** @param {HTMLElement} parentElement */
   findRadioInputs(parentElement) {
@@ -1292,6 +1287,12 @@ window.addEventListener('pageshow', (event) => {
         case "getQuizTitle": {
           console.log('Sending Quiz Title:', Highlighter.findQuizTitle());
           sendResponse({ quiz_title: Highlighter.findQuizTitle() });
+          break;
+        }
+        case "getTotalQuestions": {
+          const form = document.querySelector('form');
+          console.log('Sending Total Questions:', Highlighter.findTotalQuestions(form));
+          sendResponse({ total_questions: Highlighter.findTotalQuestions(form) });
           break;
         }
         case 'startHighlighting': {

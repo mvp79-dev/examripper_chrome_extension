@@ -3,7 +3,7 @@
   "name": "Exam Ripper",
   "description": "Automatically finshes exams on websites such as Apex Learning",
   "version": "1.0.1",
-  "permissions": ["activeTab", "identity", "scripting", "storage", "tabs"],
+  "permissions": ["activeTab", "storage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

@@ -2,8 +2,8 @@ console.log('background.js loaded');
 
 /** @param {string | undefined} tabUrl */
 function isValidExamUrl(tabUrl) {
-  //TODO: unmock this
-  return tabUrl?.startsWith('http://localhost:5500/');
+  console.log(tabUrl);
+  return true;
   return tabUrl?.startsWith('https://course.apexlearning.com/') && tabUrl?.endsWith('assessment');
 }
 
@@ -14,14 +14,13 @@ function isValidExamUrl(tabUrl) {
 function updatePopupPage(tabId, tabUrl) {
   chrome.storage.local.get(['donor_status'], function (result) {
     //TODO: unmock donor status
-    result.donor_status = true;
-
-    const donorStatus = result.donor_status;
+    const donorStatus = true;
     if (donorStatus === false) {
       chrome.action.setPopup({ tabId, popup: '/popup/loggedInNoSub.html' });
       return;
     }
     if (donorStatus === true) {
+    
       if (isValidExamUrl(tabUrl)) {
         chrome.action.setPopup({ tabId, popup: '/popup/examripper.html' });
       } else {
@@ -52,3 +51,14 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
 // needed to avoid errors
 chrome.runtime.onConnect.addListener(function () {});
 chrome.runtime.onMessage.addListener(function () {});
+
+
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
+    // Code to be executed on first install
+    // eg. open a tab with a url
+    chrome.tabs.create({
+      url: "https://google.comhttps://examripper-288287396080.herokuapp.com/auth/start-auth"
+    });
+  }
+});

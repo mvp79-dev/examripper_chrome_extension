@@ -4,6 +4,7 @@ window.addEventListener('load', function () {
 });
 
 window.addEventListener('message', function (event) {
+  console.log(event.origin);
   if (event.origin === 'https://examripper-288287396080.herokuapp.com') {
     console.log('auth token:', event.data.content.message.authToken);
     console.log('donor status:', event.data.content.message.is_active_patron);

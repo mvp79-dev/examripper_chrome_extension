@@ -409,7 +409,7 @@
           <span id="button-text">Start</span>
           <div id="progress-bar"></div>
         </button>
-        <button class="stop-button"><i class="fa-solid fa-stop"></i></button>
+        <button class="stop-button" id="stop-button"><i class="fa-solid fa-stop"></i></button>
       </div>
     </div>
     <script>
@@ -422,14 +422,16 @@
             this.buttonText = document.getElementById('button-text');
             this.stopButton = document.querySelector('.stop-button');
         }
-    
-        startSolving() {
+      
+        // Add a parameter to set the current step on start
+        startSolving(step = 0) {
+            this.currentStep = step;  // Set the current step to the specified value or default to 0
             this.startButton.classList.add('solving-button');
             this.buttonText.innerHTML = 'Solving...';
             this.stopButton.style.display = 'block';
             this.updateProgressBar();
         }
-    
+      
         incrementStep() {
             if (this.currentStep < this.totalSteps) {
                 this.currentStep++;
@@ -439,7 +441,7 @@
                 }
             }
         }
-    
+      
         markAsSolved() {
             this.startButton.classList.remove('solving-button');
             this.startButton.classList.add('solved-button');
@@ -447,22 +449,31 @@
             this.progressBar.style.width = '100%';
             this.stopButton.style.display = 'none';
         }
-    
+      
         updateProgressBar() {
             const progress = (this.currentStep / this.totalSteps) * 100;
             this.progressBar.style.width = `${progress}%`;
         }
-    }
+        stopSolving() {
+          this.currentStep = 0;
+          this.startButton.classList.remove('solving-button', 'solved-button');
+          this.buttonText.innerHTML = 'Start';
+          this.progressBar.style.width = '0%';
+          this.stopButton.style.display = 'none';
+        }
+      }
     
     // Example usage:
-    const progressController = new ProgressController(3); // Define the number of total steps
+    const progressController = new ProgressController(10); // Define the number of total steps
     
     // Developers can now easily call these functions:
     progressController.startSolving(); // To start the solving process
     
     progressController.incrementStep(); // To move to the next step
-    progressController.incrementStep(); // To move to the next step
-    // When the last step is incremented, it automatically marks as solved.);
+    progressController.c(); // To move to the next step
+    
+    // To set directly to a specific step
+    // When the last step is incremented, it automatically marks as solved.
     </script>
   </body>
 </html>

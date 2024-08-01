@@ -4,18 +4,24 @@ const intervalSlider = /** @type{HTMLInputElement} */ (document.getElementById('
 const sliderCurrentValue = /** @type{HTMLSpanElement} */ (document.getElementById('current-value'));
 const actionButton = /** @type{HTMLButtonElement} */ (document.getElementById('start-button'));
 const quizTitle = /** @type{HTMLSpanElement} */ (document.getElementById('quiz-title'));
+const stopbutton = /** @type{HTMLSpanElement} */ (document.getElementById('stop-button'));
+
+
 
 class ProgressController {
-  constructor(totalSteps) {
-      this.totalSteps = totalSteps;
+  constructor() {
+      this.totalSteps = 0;
       this.currentStep = 0;
+      this.isSolving = false;  // Boolean to track whether it is currently solving
       this.startButton = document.getElementById('start-button');
       this.progressBar = document.getElementById('progress-bar');
       this.buttonText = document.getElementById('button-text');
       this.stopButton = document.querySelector('.stop-button');
   }
 
-  startSolving() {
+  startSolving(step = 0) {
+      this.currentStep = step;
+      this.isSolving = true;
       this.startButton.classList.add('solving-button');
       this.buttonText.innerHTML = 'Solving...';
       this.stopButton.style.display = 'block';
@@ -32,36 +38,44 @@ class ProgressController {
       }
   }
 
-  setStep(stepNumber) {
-      if (stepNumber >= 0 && stepNumber <= this.totalSteps) {
-          this.currentStep = stepNumber;
-          this.updateProgressBar();
-          if (this.currentStep === this.totalSteps) {
-              this.markAsSolved();
-          } else {
-              this.startButton.classList.remove('solved-button');
-              this.startButton.classList.add('solving-button');
-              this.buttonText.innerHTML = 'Solving...';
-              this.stopButton.style.display = 'block';
-          }
-      } else {
-          console.error('Invalid step number');
-      }
-  }
-
   markAsSolved() {
       this.startButton.classList.remove('solving-button');
       this.startButton.classList.add('solved-button');
       this.buttonText.innerHTML = '<i class="fas fa-check icon"></i> Solved';
       this.progressBar.style.width = '100%';
       this.stopButton.style.display = 'none';
+      this.isSolving = false;
   }
 
   updateProgressBar() {
       const progress = (this.currentStep / this.totalSteps) * 100;
       this.progressBar.style.width = `${progress}%`;
   }
+
+  stopSolving() {
+      this.currentStep = 0;
+      this.isSolving = false;
+      this.startButton.classList.remove('solving-button', 'solved-button');
+      this.buttonText.innerHTML = 'Start';
+      this.progressBar.style.width = '0%';
+      this.stopButton.style.display = 'none';
+  }
+  /**
+   * 
+   * @param {number} steps 
+   */
+  setTotalSteps(steps) {
+    this.totalSteps = steps;
+  }
+
+  // Method to check if it is currently solving
+  isCurrentlySolving() {
+      return this.isSolving;
+  }
 }
+
+let progress = new ProgressController();
+
 
 function setQuizName() {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -80,17 +94,38 @@ function setQuizName() {
 }
 
 function getTotalQuestions() {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]?.id) {
-      chrome.tabs.sendMessage(tabs[0].id, { action: 'getTotalQuestions' }, function (response) {
-        if (response && response.total_questions) {
-          console.log('Total Questions:', response.total_questions);
-          return response.total_questions;
-        } else {
-          console.log('Failed to get total questions');
-        }
-      });
-    }
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'getTotalQuestions' }, function (response) {
+          if (response && response.total_questions) {
+            console.log('Total Questions:', response.total_questions);
+            resolve(parseInt(response.total_questions));
+          } else {
+            console.log('Failed to get total questions');
+            reject('Failed to get total questions');
+          }
+        });
+      }
+    });
+  });
+}
+
+function getCurrentQuestion() {
+  return new Promise((resolve, reject) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'getCurrentQuestion' }, function (response) {
+          if (response && response.current_question) {
+            console.log('Current Question:', response.current_question);
+            resolve(response.current_question);
+          } else {
+            console.log('Failed to get current question');
+            reject('Failed to get current question');
+          }
+        });
+      }
+    });
   });
 }
 
@@ -100,13 +135,16 @@ try {
   if (!(intervalSlider instanceof HTMLInputElement)) throw 'intervalSlider not HTMLInputElement';
   if (!(sliderCurrentValue instanceof HTMLSpanElement)) throw 'sliderCurrentValue not HTMLSpanElement';
   if (!(actionButton instanceof HTMLButtonElement)) throw 'startButton not HTMLButtonElement';
-  let progress;
+  
 
   chrome.runtime.onMessage.addListener((message) => {
     console.log('onMessage:', message);
     switch (message.action) {
       case 'updateStatus': {
-        updateButtons(message.status);
+        console.log('updateStatus:', message.status);
+        const step = message.step;
+        console.log(step)
+        updateButtons(message.status, step);
         break;
       }
       
@@ -128,7 +166,7 @@ try {
   intervalSlider.addEventListener('input', updateSliderValue);
 
   actionButton.addEventListener('click', function () {
-    if (actionButton.classList.contains('start-button')) {
+    if (!progress.isCurrentlySolving()) {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         if (tabs[0]?.id) {
           console.log('chrome.tabs.sendMessage, startHighlighting');
@@ -140,7 +178,7 @@ try {
       });
       return;
     }
-    if (actionButton.classList.contains('stop-button')) {
+    else  {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         if (tabs[0]?.id) {
           console.log('chrome.tabs.sendMessage, stopHighlighting');
@@ -153,6 +191,18 @@ try {
       return;
     }
   });
+  stopbutton.addEventListener('click', function () {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      if (tabs[0]?.id) {
+        console.log('chrome.tabs.sendMessage, stopHighlighting');
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'stopHighlighting' }, function () {
+          const error = chrome.runtime.lastError;
+          if (error) console.log('chrome.runtime.lastError', error);
+        });
+      }
+    });
+    return;
+  });
 
   updateSliderValue();
   
@@ -163,31 +213,46 @@ try {
 
 
 /**
- * @param {'Ready'|'Start'|'Incriment'|'Stop'} status
- * @param {ProgressController} controller
- * @param {number} steps
+ * @param {'Ready'|'Running'|'Increment'|'Stopping'} status
  * @param {number} currentStep
  */
 
-async function updateButtons(status, controller, steps=0, currentStep=0) {
+async function updateButtons(status, currentStep=0) {
   console.log('updateButtons:', status);
   switch (status) {
     case 'Ready':
-      controller = new ProgressController(steps);
-      return controller;
-    case 'Stop':
-      controller.markAsSolved();
-      
+      console.log('Ready');
+      try {
+        const totalQuestions = await getTotalQuestions();
+        console.log('Total Questions Received:', totalQuestions);
+        progress.setTotalSteps(totalQuestions);
+      } catch (error) {
+        console.error('Error getting total questions:', error);
+      }
       break;
-    case "Start": {
-      controller = new ProgressController(steps);
-      controller.startSolving
+
+    case 'Stopping':
+      console.log('Stopping');
+      progress.stopSolving();    
+      break;
+    case "Running": {
+      console.log('Running: we are in the switch function and it detected running');
+      try {
+        const currentQuestion = await getCurrentQuestion();
+        console.log('Current Question Received:', currentQuestion);
+        progress.startSolving(currentQuestion);
+      } catch (error) {
+        console.error('Error getting current question:', error);
+      }
+      break;
     }
-    case 'Incriment':
+    case 'Increment':
+      console.log("Incrementing we are in the switch function and it dtected increment"); 
       progress.incrementStep();
       break;
   }
 }
+
 
 function updateSliderValue() {
   const value = parseFloat(intervalSlider.value);
@@ -196,8 +261,3 @@ function updateSliderValue() {
 
 
 
-
-
-
-// To set directly to a specific step
-// When the last step is incremented, it automatically marks as solved.

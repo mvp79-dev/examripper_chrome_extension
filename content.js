@@ -1,21 +1,16 @@
 //TODO: unmock the server when done
 // const BASE_URL = 'https://examripper-288287396080.herokuapp.com';
-const BASE_URL = 'http://localhost:5500';
+const BASE_URL = 'http://127.0.0.1:5501';
 
-// const API_URLS = {
-//   ask: BASE_URL + '/api/ask',
-//   image: BASE_URL + '/api/image',
-//   match_terms: BASE_URL + '/match-terms',
-//   validate: BASE_URL + '/validate',
-// };
+
 
 const API_URLS = {
-  checkbox: BASE_URL + '/checkbox',
-  dragAndDrop: BASE_URL + '/drag-and-drop',
-  freeResponse: BASE_URL + '/free-response',
-  multipleChoice: BASE_URL + '/multiple-choice',
-  unknown: BASE_URL + '/unknown',
-  validate: BASE_URL + '/validate',
+  checkbox: BASE_URL + '/api/image/checkbox',
+  dragAndDrop: BASE_URL + '/api/match-terms',
+  freeResponse: BASE_URL + '/api/image/freeResponse',
+  multipleChoice: BASE_URL + '/api/ask',
+  multipleChoiceIMG: BASE_URL + '/api/image/multipleChoiceIMG',
+  validate: BASE_URL + '/api/validate'
 };
 
 const NOTABLE_FUNCTIONS = () => {
@@ -26,7 +21,6 @@ const NOTABLE_FUNCTIONS = () => {
 
 async function getAuthToken() {
   //TODO: unmock when done
-  return 'mock-auth-token';
   return new Promise((resolve, reject) => {
     chrome.storage.local.get('authToken', function (result) {
       if (chrome.runtime.lastError) {
@@ -92,11 +86,12 @@ class Highlighter {
 
     if (Highlighter.Status === 'Ready' && new_status === 'Stopping') {
       new_status = 'Ready';
-    }
+    } 
+    
     Highlighter.Status = new_status;
     if (Highlighter.RuntimeConnected === true) {
       console.log('UpdateStatus, Highlighter.RuntimeConnected:', Highlighter.RuntimeConnected);
-      chrome.runtime.sendMessage({ action: 'updateStatus', status: Highlighter.Status });
+      chrome.runtime.sendMessage({ action: 'updateStatus', status: Highlighter.Status});
     }
   }
 
@@ -247,7 +242,7 @@ class Highlighter {
       if (this.findNextButton(form) === undefined && this.findViewSummaryButton(form) === undefined) {
         // just in case, we check to see if the submit button changed to the next button or the view summary button.
         // if not, i think we can safely say something is wrong with the page
-        throw new ErrorNotFound('feedback');
+        console.log("no answer feedback provided")
       }
     }
 
@@ -257,7 +252,7 @@ class Highlighter {
       this.stop();
     }
   }
-
+  
   /** @memberof Highlighter */
   start() {
     log_call();
@@ -329,7 +324,17 @@ class Highlighter {
       body: JSON.stringify(request_data),
     });
   }
-
+  /**
+   * @memberof Highlighter
+   */
+  async incrementStep() {
+    log_call();
+    console.log('incrementing step function called from content script');
+    chrome.runtime.sendMessage({ action: 'updateStatus', status: "Increment" }).then((response) => {
+      console.log(response);
+    });
+  }
+  
   /**
    * @memberof Highlighter
    * @param {Partial<ResponseData>} response_data
@@ -382,6 +387,7 @@ class Highlighter {
     const { matchedElement: submit_button } = new TextMatcher(this.findButtons(form), ['innerText', 'value'], ['Submit']).anyIncludesAny() ?? {};
     if (submit_button) {
       submit_button.click();
+      this.incrementStep();
       await this.pause(this.action_interval);
     }
   }
@@ -675,7 +681,8 @@ class Highlighter {
     }
     return undefined;
   }
-  static findTotalQuestions() {
+  /** @param {HTMLElement} element */
+  static findTotalQuestions(element) {
     log_call();
   
     // Using querySelector to select the first element with the class 'sia-question-number'
@@ -694,6 +701,24 @@ class Highlighter {
   
     return undefined;
     }
+    static findCurrentQuestion() {
+      const form = document.querySelector('form');
+      // Using querySelector to select the first element with the class 'sia-question-number'
+      const targetElement = form.querySelector('.sia-question-number');
+    
+      if (targetElement) {
+        const content = targetElement.textContent;
+        const match = content.match(/\d+/);  // Changed regex to capture the first number
+    
+        if (match) {
+          const currentNumber = parseInt(match[0], 10);
+          console.log(currentNumber); // Optional: log the number
+          return currentNumber;
+        }
+      }
+    
+      return undefined;
+  }
 
   /** @param {HTMLElement} parentElement */
   findRadioInputs(parentElement) {
@@ -1293,6 +1318,11 @@ window.addEventListener('pageshow', (event) => {
           const form = document.querySelector('form');
           console.log('Sending Total Questions:', Highlighter.findTotalQuestions(form));
           sendResponse({ total_questions: Highlighter.findTotalQuestions(form) });
+          break;
+        }
+        case "getCurrentQuestion": {
+          console.log('Sending Current Question:', Highlighter.findCurrentQuestion());
+          sendResponse({ current_question: Highlighter.findCurrentQuestion() });
           break;
         }
         case 'startHighlighting': {

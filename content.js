@@ -1,6 +1,6 @@
 //TODO: unmock the server when done
 // const BASE_URL = 'https://examripper-288287396080.herokuapp.com';
-const BASE_URL = 'http://127.0.0.1:5501';
+const BASE_URL = 'http://127.0.0.1:5502';
 
 
 
@@ -9,7 +9,6 @@ const API_URLS = {
   dragAndDrop: BASE_URL + '/api/match-terms',
   freeResponse: BASE_URL + '/api/image/freeResponse',
   multipleChoice: BASE_URL + '/api/ask',
-  multipleChoiceIMG: BASE_URL + '/api/image/multipleChoiceIMG',
   validate: BASE_URL + '/api/validate'
 };
 
@@ -39,6 +38,7 @@ async function getAuthToken() {
  * @property {string=} text
  * @property {string=} session_id
  * @property {boolean=} is_correct
+ * @property {string=} subject
  */
 
 /**
@@ -100,9 +100,11 @@ class Highlighter {
   /**
    * @memberof Highlighter
    * @param {number} action_interval
+   * @param {string} subject
    */
-  constructor(action_interval) {
+  constructor(action_interval, subject) {
     this.action_interval = action_interval;
+    this.subject = subject;
   }
 
   // The main method.
@@ -204,6 +206,8 @@ class Highlighter {
           if (input) {
             console.log('writing in free response answer');
             input.value = answer;
+            const inputEvent = new Event('input', { bubbles: true });
+            input.dispatchEvent(inputEvent);
             await this.pause(this.action_interval);
           } else {
             throw new ErrorNotFound(Highlighter.Question_Type.freeResponse);
@@ -290,7 +294,7 @@ class Highlighter {
 
   
 
-  /**
+ /**
    * @param {string} api_url
    * @param {string|undefined} quiz_title
    * @param {Partial<RequestData>} data
@@ -308,6 +312,7 @@ class Highlighter {
       text: data.text,
       session_id: data.session_id,
       is_correct: data.is_correct,
+      subject: this.subject,
     };
 
     // remove keys that are undefined to save bandwidth
@@ -317,13 +322,27 @@ class Highlighter {
       }
     }
 
-    // ...specific_request_data,
-    return await fetch(api_url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request_data),
-    });
+    try {
+      const response = await fetch(api_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request_data),
+      });
+      console.log(response);
+      if (!response.ok) {
+
+        const responseText = await response.text();
+        console.log("error response text:", responseText);
+        raiseIssue(responseText);
+      }
+
+      return response;
+    } catch (error) {
+      console.log("error")
+      raiseIssue(error.message);
+    }
   }
+
   /**
    * @memberof Highlighter
    */
@@ -349,6 +368,7 @@ class Highlighter {
     };
 
     if (typeof response_data.session_id !== 'string' || response_data.session_id === '') {
+      console.log(response_data)
       throw new ErrorNotFound('response_data.session_id');
     }
     sanitized_data.session_id = response_data.session_id;
@@ -537,9 +557,9 @@ class Highlighter {
   async findImageData(form) {
     log_call();
 
-    if (this.findImages(form).length > 0) {
+    if (this.findImages(form).length > 0 || this.subject === 'Math') { // Math is special, we are going to use images for it now
       // @ts-ignore
-      const canvas = await html2canvas(form, { useCORS: true, allowTaint: false });
+      const canvas = await html2canvas(form, { useCORS: true, allowTaint: true });
       if (canvas instanceof HTMLCanvasElement) {
         const dataURL = canvas.toDataURL('image/png');
         if (dataURL !== '') {
@@ -1290,6 +1310,10 @@ function BeforeUnloadHandler() {
   Highlighter.UpdateStatus('Ready');
 }
 
+function raiseIssue(message) {
+  console.error(message);
+  chrome.runtime.sendMessage({ action: 'error', error: message });
+}
 
 
 
@@ -1328,7 +1352,7 @@ window.addEventListener('pageshow', (event) => {
         case 'startHighlighting': {
           window.addEventListener('beforeunload', BeforeUnloadHandler);
           if (highlighter) highlighter.stop();
-          highlighter = new Highlighter(message.interval);
+          highlighter = new Highlighter(message.interval, message.subject);
           highlighter.start();
           break;
         }

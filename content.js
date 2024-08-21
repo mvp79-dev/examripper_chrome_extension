@@ -1,6 +1,4 @@
-//TODO: unmock the server when done
-// const BASE_URL = 'https://examripper-288287396080.herokuapp.com';
-const BASE_URL = 'http://127.0.0.1:5502';
+const BASE_URL = 'https://examripper-288287396080.herokuapp.com';
 
 
 
@@ -19,7 +17,6 @@ const NOTABLE_FUNCTIONS = () => {
 };
 
 async function getAuthToken() {
-  //TODO: unmock when done
   return new Promise((resolve, reject) => {
     chrome.storage.local.get('authToken', function (result) {
       if (chrome.runtime.lastError) {
@@ -39,6 +36,7 @@ async function getAuthToken() {
  * @property {string=} session_id
  * @property {boolean=} is_correct
  * @property {string=} subject
+ * @property {boolean=} brainly
  */
 
 /**
@@ -101,10 +99,12 @@ class Highlighter {
    * @memberof Highlighter
    * @param {number} action_interval
    * @param {string} subject
+   * @param {boolean} brainly
    */
-  constructor(action_interval, subject) {
+  constructor(action_interval, subject, brainly) {
     this.action_interval = action_interval;
     this.subject = subject;
+    this.brainly = brainly;
   }
 
   // The main method.
@@ -313,6 +313,7 @@ class Highlighter {
       session_id: data.session_id,
       is_correct: data.is_correct,
       subject: this.subject,
+      brainly: this.brainly,
     };
 
     // remove keys that are undefined to save bandwidth
@@ -353,6 +354,11 @@ class Highlighter {
       console.log(response);
     });
   }
+
+
+ 
+
+  
   
   /**
    * @memberof Highlighter
@@ -672,7 +678,7 @@ class Highlighter {
     }
     return {};
   }
-
+  
   /** @param {HTMLFormElement} form */
   findQuestionText(form) {
     log_call();
@@ -1352,7 +1358,7 @@ window.addEventListener('pageshow', (event) => {
         case 'startHighlighting': {
           window.addEventListener('beforeunload', BeforeUnloadHandler);
           if (highlighter) highlighter.stop();
-          highlighter = new Highlighter(message.interval, message.subject);
+          highlighter = new Highlighter(message.interval, message.subject, message.brainly);
           highlighter.start();
           break;
         }

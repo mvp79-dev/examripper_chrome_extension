@@ -5,19 +5,33 @@ const sliderCurrentValue = /** @type{HTMLSpanElement} */ (document.getElementByI
 const actionButton = /** @type{HTMLButtonElement} */ (document.getElementById('start-button'));
 const quizTitle = /** @type{HTMLSpanElement} */ (document.getElementById('quiz-title'));
 const stopbutton = /** @type{HTMLSpanElement} */ (document.getElementById('stop-button'));
+const subjectRadios = document.querySelectorAll('input[name="subject"]');
+
+function getSelectedSubject() {
+  for (const radio of subjectRadios) {
+    if (radio.checked) {
+      return radio.value;
+    }
+  }
+  return null; // Return null if no radio is selected
+}
 
 
 
 class ProgressController {
   constructor() {
-      this.totalSteps = 0;
-      this.currentStep = 0;
-      this.isSolving = false;  // Boolean to track whether it is currently solving
-      this.startButton = document.getElementById('start-button');
-      this.progressBar = document.getElementById('progress-bar');
-      this.buttonText = document.getElementById('button-text');
-      this.stopButton = document.querySelector('.stop-button');
-  }
+    this.totalSteps = 0;
+    this.currentStep = 0;
+    this.isSolving = false;  // Boolean to track whether it is currently solving
+    this.startButton = document.getElementById('start-button');
+    this.progressBar = document.getElementById('progress-bar');
+    this.buttonText = document.getElementById('button-text');
+    this.stopButton = document.querySelector('.stop-button');
+    this.errorMessage = document.getElementById('error-message'); // New property for error message element
+    this.errorText = document.getElementById('error-text'); // New property for error text element
+    this.errorLink = document.getElementById('error-link'); // New property for error link element
+
+}
 
   startSolving(step = 0) {
       this.currentStep = step;
@@ -59,6 +73,8 @@ class ProgressController {
       this.buttonText.innerHTML = 'Start';
       this.progressBar.style.width = '0%';
       this.stopButton.style.display = 'none';
+      this.errorMessage = document.getElementById('error-message'); // New property for error message element
+
   }
   /**
    * 
@@ -72,9 +88,24 @@ class ProgressController {
   isCurrentlySolving() {
       return this.isSolving;
   }
+  displayError(message, link) {
+    this.errorText.textContent = "Error occured! " + message + " . Please click here to report the issue.";
+    this.errorLink.href = link;
+    this.errorMessage.style.display = 'block';
+  }
+
+  // New method to hide error message
+  hideError() {
+    this.errorMessage.style.display = 'none';
+  }
+  
 }
 
+
+
 let progress = new ProgressController();
+
+
 
 
 function setQuizName() {
@@ -136,6 +167,7 @@ try {
   if (!(sliderCurrentValue instanceof HTMLSpanElement)) throw 'sliderCurrentValue not HTMLSpanElement';
   if (!(actionButton instanceof HTMLButtonElement)) throw 'startButton not HTMLButtonElement';
   
+  
 
   chrome.runtime.onMessage.addListener((message) => {
     console.log('onMessage:', message);
@@ -146,6 +178,18 @@ try {
         console.log(step)
         updateButtons(message.status, step);
         break;
+      } 
+      case 'error': {
+        console.log('Error:', message.error);
+        if (message.error.includes('token')) {
+          progress.displayError('Your token is invalid. Please click here to relogin.', 'https://examripper-288287396080.herokuapp.com/auth/start-auth');
+          break;
+        }
+        else {
+          progress.displayError(message.error, "https://discord.gg/examripper");
+          break;
+        }
+        
       }
       
     }
@@ -166,11 +210,14 @@ try {
   intervalSlider.addEventListener('input', updateSliderValue);
 
   actionButton.addEventListener('click', function () {
+    console.log(getSelectedSubject());
     if (!progress.isCurrentlySolving()) {
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
         if (tabs[0]?.id) {
+          const brainlyCheckbox = document.getElementById('use-brainly');
           console.log('chrome.tabs.sendMessage, startHighlighting');
-          chrome.tabs.sendMessage(tabs[0].id, { action: 'startHighlighting', interval: parseFloat(intervalSlider.value) * 1000 }, function () {
+          console.log(brainlyCheckbox.checked);
+          chrome.tabs.sendMessage(tabs[0].id, { action: 'startHighlighting', interval: parseFloat(intervalSlider.value) * 1000, subject: getSelectedSubject(), brainly: brainlyCheckbox.checked }, function () {
             const error = chrome.runtime.lastError;
             if (error) console.log('chrome.runtime.lastError', error);
           });
@@ -192,6 +239,7 @@ try {
     }
   });
   stopbutton.addEventListener('click', function () {
+    console.log("stop button clicked");
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       if (tabs[0]?.id) {
         console.log('chrome.tabs.sendMessage, stopHighlighting');
@@ -235,6 +283,8 @@ async function updateButtons(status, currentStep=0) {
       console.log('Stopping');
       progress.stopSolving();    
       break;
+
+    
     case "Running": {
       console.log('Running: we are in the switch function and it detected running');
       try {
@@ -250,6 +300,8 @@ async function updateButtons(status, currentStep=0) {
       console.log("Incrementing we are in the switch function and it dtected increment"); 
       progress.incrementStep();
       break;
+    
+
   }
 }
 

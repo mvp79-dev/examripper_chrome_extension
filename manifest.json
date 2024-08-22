@@ -8,20 +8,6 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
-  "background": {
-    "service_worker": "background.js"
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["html2canvas.min.js", "content.js", "login.js"]
-    }
-  ],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -29,5 +15,11 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_scripts/html2canvas.min.js", "content_scripts/content.js", "content_scripts/login.js"]
+    }
+  ]
 }

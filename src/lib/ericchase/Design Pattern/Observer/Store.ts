@@ -1,4 +1,4 @@
-export type SubscriptionCallback<Value> = (value: Value) => void;
+export type SubscriptionCallback<Value> = (value: Value, unsubscribe: () => void) => void;
 export type UpdateCallback<Value> = (value: Value) => Value;
 
 export class Store<Value> {
@@ -10,50 +10,71 @@ export class Store<Value> {
   ) {
     this.currentValue = initialValue;
   }
-  subscribe(callback: SubscriptionCallback<Value>) {
+  subscribe(callback: SubscriptionCallback<Value>): () => void {
     this.subscriptionSet.add(callback);
-    callback(this.currentValue);
-    return () => {
+    const unsubscribe = () => {
       this.subscriptionSet.delete(callback);
     };
+    callback(this.currentValue, unsubscribe);
+    return unsubscribe;
   }
   get value(): Value {
     return this.currentValue;
   }
-  set(value: Value) {
+  set(value: Value): void {
     if (this.notifyOnChangeOnly && this.currentValue === value) return;
     this.currentValue = value;
     for (const callback of this.subscriptionSet) {
-      callback(value);
+      callback(value, () => {
+        this.subscriptionSet.delete(callback);
+      });
     }
   }
-  update(callback: UpdateCallback<Value>) {
+  update(callback: UpdateCallback<Value>): void {
     this.set(callback(this.currentValue));
   }
 }
 
 export class OptionalStore<Value> {
-  protected currentValue: Value | undefined;
-  protected subscriptionSet = new Set<SubscriptionCallback<Value | undefined>>();
-  constructor(protected notifyOnChangeOnly: boolean = false) {}
-  subscribe(callback: SubscriptionCallback<Value | undefined>) {
-    this.subscriptionSet.add(callback);
-    callback(this.currentValue);
-    return () => {
-      this.subscriptionSet.delete(callback);
-    };
+  protected store: Store<Value | undefined>;
+  constructor(notifyOnChangeOnly = false) {
+    this.store = new Store<Value | undefined>(undefined, notifyOnChangeOnly);
+  }
+  subscribe(callback: SubscriptionCallback<Value | undefined>): () => void {
+    return this.store.subscribe(callback);
   }
   get value(): Value | undefined {
-    return this.currentValue;
+    return this.store.value;
   }
-  set(value: Value | undefined) {
-    if (this.notifyOnChangeOnly && this.currentValue === value) return;
-    this.currentValue = value;
-    for (const callback of this.subscriptionSet) {
-      callback(value);
+  set(value: Value | undefined): void {
+    this.store.set(value);
+  }
+  update(callback: UpdateCallback<Value | undefined>): void {
+    this.store.update(callback);
+  }
+}
+
+export function CompoundSubscription<T extends any[]>(stores: { [K in keyof T]: Store<T[K]> | OptionalStore<T[K]> }, callback: SubscriptionCallback<{ [K in keyof T]: T[K] | undefined }>): () => void {
+  const unsubs: (() => void)[] = [];
+  const unsubscribe = () => {
+    for (const unsub of unsubs) {
+      unsub();
     }
+  };
+  const values = [] as { [K in keyof T]: T[K] | undefined };
+  const callback_handler = () => {
+    if (values.length === stores.length) {
+      callback(values, unsubscribe);
+    }
+  };
+  for (let i = 0; i < stores.length; i++) {
+    stores[i].subscribe((value, unsubscribe) => {
+      values[i] = value;
+      unsubs[i] = unsubscribe;
+      if (values.length === stores.length) {
+        callback_handler();
+      }
+    });
   }
-  update(callback: UpdateCallback<Value | undefined>) {
-    this.set(callback(this.currentValue));
-  }
+  return unsubscribe;
 }

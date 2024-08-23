@@ -3,10 +3,10 @@
   "name": "Exam Ripper",
   "description": "Automatically finshes exams on websites such as Apex Learning",
   "version": "1.6.0",
-  "permissions": ["activeTab", "storage", "tabs"],
+  "permissions": ["activeTab", "scripting", "storage", "tabs", "webRequest"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
   "action": {
     "default_popup": "popup/popup.html",
@@ -18,8 +18,24 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["*://course.apexlearning.com/*", "*://*.edpuzzle.com/*"],
+      "js": ["content_scripts/@document_start.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["*://course.apexlearning.com/*"],
       "js": ["content_scripts/html2canvas.min.js", "content_scripts/content.js", "content_scripts/login.js"]
+    },
+    {
+      "matches": ["*://*.edpuzzle.com/*"],
+      "js": ["content_scripts/edpuzzle_idle.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": ["*://*.edpuzzle.com/*"],
+      "resources": ["web_accessible_resources/edpuzzle_inject.js"]
     }
   ]
 }

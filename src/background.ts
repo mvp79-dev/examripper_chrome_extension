@@ -4,9 +4,7 @@ import { Message, MessageAction } from './lib/Message.js';
 
 chrome.runtime.onInstalled.addListener(function (details) {
   if (details.reason === 'install' || details.reason === 'update') {
-    // TODO
-    chrome.storage.local.set({ donor_status: true });
-    // chrome.tabs.create({ url: 'https://examripper-288287396080.herokuapp.com/auth/start-auth' });
+    chrome.tabs.create({ url: 'https://examripper-288287396080.herokuapp.com/auth/start-auth' });
   }
 });
 
@@ -26,8 +24,10 @@ chrome.runtime.onMessage.addListener((message: Message, sender) => {
         });
         break;
       case MessageAction.Edpuzzle_GetClickToAnswer:
-        // TODO: hook this in with extension storage or something
-        chrome.tabs.sendMessage(tab_id, Message(MessageAction.Edpuzzle_ClickToAnswer, { enabled: true }));
+        chrome.storage.local.get('edpuzzle_clickToAnswer', ({ edpuzzle_clickToAnswer }) => {
+          const enabled = typeof edpuzzle_clickToAnswer === 'boolean' ? edpuzzle_clickToAnswer : false;
+          chrome.tabs.sendMessage(tab_id, Message(MessageAction.Edpuzzle_ClickToAnswer, { enabled }));
+        });
         break;
     }
   }
@@ -40,7 +40,7 @@ console.log('background.js loaded');
 
 function getPopupPage(tabUrl = '') {
   console.log({ tabUrl });
-  if (GlobSearch(tabUrl, '*://127.0.0.1:8000/*')) {
+  if (GlobSearch(tabUrl, '*://course.apexlearning.com/*assessment')) {
     console.log('examripper');
     return '/popup/examripper.html';
   }
@@ -52,29 +52,21 @@ function getPopupPage(tabUrl = '') {
   return '/popup/loggedInSub.html';
 }
 
-function isValidExamUrl(tabUrl: string | undefined) {
-  console.log(tabUrl);
-  // TODO
-  // return tabUrl?.startsWith('https://course.apexlearning.com/') && tabUrl?.endsWith('assessment');
-  if (tabUrl?.startsWith('http://127.0.0.1:8000/')) return true;
-  if (tabUrl?.startsWith('https://edpuzzle.com/assignments/')) return true;
-  return false;
-}
+// TODO: probably remove this in favor of getPopupPage
+// function isValidExamUrl(tabUrl: string | undefined) {
+//   console.log(tabUrl);
+//   // return tabUrl?.startsWith('https://course.apexlearning.com/') && tabUrl?.endsWith('assessment');
+//   if (tabUrl?.startsWith('http://127.0.0.1:8000/')) return true;
+//   if (tabUrl?.startsWith('https://edpuzzle.com/assignments/')) return true;
+//   return false;
+// }
 
 function updatePopupPage(tabId?: number, tabUrl?: string) {
-  chrome.storage.local.get(['donor_status'], function (result) {
-    console.log(result);
-    let donorStatus = result.donor_status;
-    console.log('donorStatus:', donorStatus);
-    if (donorStatus === false) {
+  chrome.storage.local.get(['donor_status'], function ({ donor_status }) {
+    if (donor_status === false) {
       chrome.action.setPopup({ tabId, popup: '/popup/loggedInNoSub.html' });
-    } else if (donorStatus === true) {
+    } else if (donor_status === true) {
       chrome.action.setPopup({ tabId, popup: getPopupPage(tabUrl) });
-      // if (isValidExamUrl(tabUrl)) {
-      //   chrome.action.setPopup({ tabId, popup: '/popup/examripper.html' });
-      // } else {
-      //   chrome.action.setPopup({ tabId, popup: '/popup/loggedInSub.html' });
-      // }
     } else {
       chrome.action.setPopup({ tabId, popup: '/popup/start.html' });
     }

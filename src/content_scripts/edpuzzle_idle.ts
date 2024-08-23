@@ -1,5 +1,5 @@
 import { Sleep } from '../lib/ericchase/Algorithm/Sleep.js';
-import { CompoundSubscription, OptionalStore, Store } from '../lib/ericchase/Design Pattern/Observer/Store.js';
+import { Once, Optional } from '../lib/ericchase/Design Pattern/Observer/Store.js';
 import { type WebRequest, RebuildAndSendRequest } from '../lib/ericchase/Platform/Browser/Extension/WebRequest.js';
 import { ChildListObserver } from '../lib/ericchase/Platform/Web/DOM/MutationObserver/ChildList.js';
 import { ElementAddedObserver } from '../lib/ericchase/Platform/Web/DOM/MutationObserver/ElementAdded.js';
@@ -14,6 +14,7 @@ interface AssignmentData {
     views: number;
   }[];
 }
+
 interface Question {
   type: string;
   questionNumber: number;
@@ -43,37 +44,70 @@ interface Question {
   _id: string;
 }
 
-let isTimelineUnlocked = false;
-let clickToAnswer = true;
+class QuestionSection {
+  constructor(
+    public paragraph: HTMLParagraphElement,
+    public text: string,
+    public answerSection: HTMLElement,
+  ) {
+    paragraph.style.setProperty('cursor', 'pointer');
+    paragraph.addEventListener('click', this.handler);
+  }
+  public cleanup() {
+    this.paragraph.style.removeProperty('cursor');
+    this.paragraph.removeEventListener('click', this.handler);
+  }
+  private handler = () => {
+    console.log('paragraph clicked:', this.paragraph);
+    answerQuestion(this);
+  };
+}
 
-const assignmentDataStore = new OptionalStore<AssignmentData>();
-const edpuzzleVersion = new OptionalStore<string>();
-const questionsStore = new OptionalStore<Question[]>();
-const webRequestStore = new OptionalStore<WebRequest>();
+let timelineUnlocked = false;
+
+const assignment_data = new Once<AssignmentData>();
+const edpuzzle_version = new Once<string>();
+const page_webrequest = new Once<WebRequest>();
+const questions_array = new Once<Question[]>();
+
+const click_to_answer = new Optional<boolean>();
+const questionObserver_unsubscribe = new Optional<() => void>();
+const questionHeaderToSection_map = new Map<Element, QuestionSection>();
+
+const domParser = new DOMParser();
 
 async function onMessageHandler(message: Message) {
   try {
     switch (message.action) {
       case MessageAction.Edpuzzle_WebRequest:
-        webRequestStore.set(message.data.webRequest);
+        page_webrequest.set(message.data.webRequest);
         break;
       case MessageAction.Edpuzzle_UnlockTimeline:
-        if (isTimelineUnlocked === false) {
-          CompoundSubscription([assignmentDataStore, edpuzzleVersion], ([data, version], unsubscribe) => {
-            if (data && version) {
-              unsubscribe();
-              unlockTimeline(data, version);
-            }
-          });
-        }
+        unlockTimeline(await assignment_data.get(), await edpuzzle_version.get());
         break;
       case MessageAction.Edpuzzle_ClickToAnswer:
-        clickToAnswer = message.data.enabled;
-        console.log('clickToAnswer:', clickToAnswer);
+        click_to_answer.set(message.data.enabled);
         break;
     }
   } catch (error) {
-    console.error(error);
+    console.log(error);
+  }
+}
+
+async function onInit() {
+  try {
+    await getAssignmentData(await page_webrequest.get());
+    await getQuestions((await assignment_data.get()).mediaId);
+    click_to_answer.subscribe((enabled) => {
+      console.log('click_to_answer:', enabled);
+      if (enabled === true) {
+        setupQuestionObserver();
+      } else {
+        cleanupQuestionObserver();
+      }
+    });
+  } catch (error) {
+    console.log(error);
   }
 }
 
@@ -85,79 +119,46 @@ window.addEventListener('pageshow', (event) => {
     // This page was loaded normally.
     console.log('%cThis page was loaded normally.', 'color:red');
 
-    injectScript_GetVersion();
+    getVersion();
     chrome.runtime.onMessage.addListener(onMessageHandler);
     chrome.runtime.sendMessage(Message(MessageAction.Edpuzzle_GetWebRequest, {}));
-    webRequestStore.subscribe((webRequest) => {
-      if (webRequest) getAssignmentData(webRequest);
-    });
-    assignmentDataStore.subscribe((data) => {
-      if (data?.mediaId) getQuestions(data.mediaId);
-    });
-    questionsStore.subscribe((questions) => {
-      if (questions) watchForQuestions();
-    });
+    chrome.runtime.sendMessage(Message(MessageAction.Edpuzzle_GetClickToAnswer, {}));
+    onInit();
   }
 });
 
 // gets the Edpuzzle Version
-function injectScript_GetVersion() {
+function getVersion(): void {
   const script = document.createElement('script');
   script.async = false;
   script.src = chrome.runtime.getURL('web_accessible_resources/edpuzzle_inject.js');
   script.type = 'text/javascript';
   document.head.append(script);
   const observer = new ElementAddedObserver({
-    selector: 'input#version',
+    selector: 'input#edpuzzle_version',
   });
   observer.subscribe((input) => {
     if (input instanceof HTMLInputElement) {
-      edpuzzleVersion.set(input.value);
       observer.disconnect();
+      edpuzzle_version.set(input.value);
     }
   });
 }
 
-async function getAssignmentData(webRequest: WebRequest, retryCount = 0) {
+async function getAssignmentData(webRequest: WebRequest, retryCount = 0): Promise<void> {
   if (retryCount > 5) {
     throw 'All requests for data failed.';
   }
   const response = await RebuildAndSendRequest(webRequest);
   if (response?.status === 200) {
-    assignmentDataStore.set(await response.json());
+    assignment_data.set(await response.json());
   } else {
     await Sleep(500);
     await getAssignmentData(webRequest, retryCount + 1);
   }
 }
 
-// requires both the WebRequest and the Edpuzzle Version
-async function unlockTimeline(data: AssignmentData, version: string) {
-  if ((data.timeIntervals.at(-1)?.views ?? 0) > 0) {
-    isTimelineUnlocked = true;
-  } else {
-    const csrf_response = await fetch('https://edpuzzle.com/api/v3/csrf');
-    const csrf_body = await csrf_response.json();
-    if (!csrf_body.CSRFToken) {
-      throw 'Missing { CSRFToken }';
-    }
-    await fetch(`https://edpuzzle.com/api/v4/media_attempts/${data._id}/watch`, {
-      method: 'POST',
-      headers: {
-        accept: 'application/json,text/plain,*/*',
-        accept_language: 'en-US,en;q=0.9',
-        'content-type': 'application/json',
-        'x-csrf-token': csrf_body.CSRFToken,
-        'x-edpuzzle-referrer': `https://edpuzzle.com/assignments/${data.teacherAssignmentId}/watch`,
-        'x-edpuzzle-web-version': version,
-      },
-      body: JSON.stringify({ timeIntervalNumber: 10 }),
-    });
-    window.location.reload();
-  }
-}
-
-async function getQuestions(mediaId?: string) {
+async function getQuestions(mediaId?: string): Promise<void> {
   if (!mediaId) {
     const assignmentId = new URL(window.location.href).pathname.split('/').at(-2);
     const assignments_response = await fetch(`https://edpuzzle.com/api/v3/assignments/${assignmentId}`);
@@ -189,84 +190,103 @@ async function getQuestions(mediaId?: string) {
   for (const question of questions) {
     questionToChoicesArray.push(question);
   }
-  questionsStore.set((questions as Question[]).sort(({ time: a }, { time: b }) => a - b));
+  questions_array.set((questions as Question[]).sort(({ time: a }, { time: b }) => a - b));
 }
 
-function watchForQuestions() {
-  const childListObserver = new ChildListObserver({});
-  childListObserver.subscribe((record) => {
-    if (record.target instanceof Element && isVisible(record.target) && record.target && record.target.getAttribute('aria-label')?.startsWith('Question')) {
-      addQuestionHeaderSection(record.target);
+async function unlockTimeline(data: AssignmentData, version: string): Promise<void> {
+  if (timelineUnlocked || (data.timeIntervals.at(-1)?.views ?? 0) > 0) {
+    timelineUnlocked = true;
+    console.log('Already Unlocked');
+  } else {
+    const csrf_response = await fetch('https://edpuzzle.com/api/v3/csrf');
+    const csrf_body = await csrf_response.json();
+    if (!csrf_body.CSRFToken) {
+      throw 'Missing { CSRFToken }';
     }
-    const treeWalker = document.createTreeWalker(record.target, NodeFilter.SHOW_ELEMENT);
-    while (treeWalker.nextNode()) {
-      if (treeWalker.currentNode instanceof Element && isVisible(treeWalker.currentNode) && treeWalker.currentNode.getAttribute('aria-label')?.startsWith('Question')) {
-        addQuestionHeaderSection(treeWalker.currentNode);
+    await fetch(`https://edpuzzle.com/api/v4/media_attempts/${data._id}/watch`, {
+      method: 'POST',
+      headers: {
+        accept: 'application/json,text/plain,*/*',
+        accept_language: 'en-US,en;q=0.9',
+        'content-type': 'application/json',
+        'x-csrf-token': csrf_body.CSRFToken,
+        'x-edpuzzle-referrer': `https://edpuzzle.com/assignments/${data.teacherAssignmentId}/watch`,
+        'x-edpuzzle-web-version': version,
+      },
+      body: JSON.stringify({ timeIntervalNumber: 10 }),
+    });
+    window.location.reload();
+  }
+}
+
+async function setupQuestionObserver() {
+  console.log('setupQuestionObserver');
+  if ((await questionObserver_unsubscribe.get()) === undefined) {
+    questionObserver_unsubscribe.set(
+      new ChildListObserver({}).subscribe((record) => {
+        tryAddQuestionSection(record.target);
+        const treeWalker = document.createTreeWalker(record.target, NodeFilter.SHOW_ELEMENT);
+        while (treeWalker.nextNode()) {
+          tryAddQuestionSection(treeWalker.currentNode);
+        }
+      }),
+    );
+    for (const element of document.querySelectorAll("section[aria-label^='Question']")) {
+      tryAddQuestionSection(element);
+    }
+  }
+}
+function tryAddQuestionSection(headerSection: Node) {
+  if (headerSection instanceof HTMLElement && headerSection.matches("section[aria-label^='Question']")) {
+    console.log('tryAddQuestionSection', { headerSection });
+    if (!questionHeaderToSection_map.has(headerSection)) {
+      const header = headerSection.parentElement;
+      if (!(header instanceof HTMLElement && header.tagName === 'HEADER')) {
+        // console.log('header not found');
+        return;
       }
-    }
-  });
-  const treeWalker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT);
-  while (treeWalker.nextNode()) {
-    if (treeWalker.currentNode instanceof Element && isVisible(treeWalker.currentNode) && treeWalker.currentNode.getAttribute('aria-label')?.startsWith('Question')) {
-      addQuestionHeaderSection(treeWalker.currentNode);
-    }
-  }
-}
-
-const questionHeaderSectionSet = new Set<Element>();
-function addQuestionHeaderSection(element: Element) {
-  if (!questionHeaderSectionSet.has(element)) {
-    questionHeaderSectionSet.add(element);
-    addQuestionClickListeners(element);
-  }
-}
-const questionData: {
-  controller?: AbortController;
-  questionHeaderSection?: HTMLElement;
-  questionSection?: HTMLElement;
-  questionText?: string;
-} = {};
-function addQuestionClickListeners(headerSection: Element) {
-  questionData.controller?.abort(); // release old listeners?
-  questionData.controller = new AbortController();
-  if (headerSection instanceof HTMLElement) {
-    questionData.questionHeaderSection = headerSection;
-    headerSection.style.cursor = 'pointer';
-    headerSection.addEventListener('click', onQuestionClickHandler, { signal: questionData.controller.signal });
-  }
-  for (const section of headerSection.nextElementSibling?.querySelectorAll('section') ?? []) {
-    if (section.textContent !== '') {
-      questionData.questionSection = section;
-      questionData.questionText = section.textContent?.trim();
-      section.style.cursor = 'pointer';
-      section.addEventListener('click', onQuestionClickHandler, { signal: questionData.controller.signal });
+      const answerSection = header.nextElementSibling?.firstElementChild;
+      if (!(answerSection instanceof HTMLElement && answerSection.tagName === 'SECTION')) {
+        // console.log('answerSection not found');
+        return;
+      }
+      for (const questionParagraph of header.querySelectorAll('p')) {
+        const questionText = questionParagraph.textContent?.trim() ?? '';
+        if (questionText !== '') {
+          questionHeaderToSection_map.set(headerSection, new QuestionSection(questionParagraph, questionText, answerSection));
+          // console.log('questionSection added');
+          return;
+        }
+      }
+      // console.log('questionText not found');
     }
   }
 }
-function onQuestionClickHandler() {
-  questionData.questionHeaderSection?.style.removeProperty('cursor');
-  questionData.questionSection?.style.removeProperty('cursor');
-  answerCurrentQuestion();
-  questionData.controller?.abort();
+async function cleanupQuestionObserver() {
+  console.log('cleanupQuestionObserver');
+  (await questionObserver_unsubscribe.get())?.();
+  questionObserver_unsubscribe.set(undefined);
+  for (const [, section] of questionHeaderToSection_map) {
+    section.cleanup();
+  }
+  questionHeaderToSection_map.clear();
 }
-function answerCurrentQuestion() {
-  const questions = questionsStore.value;
+async function answerQuestion(questionSection: QuestionSection) {
+  // console.log('answerQuestion', { questions_array });
+  const questions = await questions_array.get();
   if (!questions) return;
-  if (!(questionData.questionHeaderSection && questionData.questionText)) return;
-  const choicesSection = questionData.questionHeaderSection.parentElement?.nextElementSibling?.firstElementChild;
-  if (!(choicesSection?.tagName === 'SECTION')) return;
 
-  // console.log(`Looking for Question Text "${questionData.questionText}"`);
+  // console.log(`Looking for Question Text "${questionSection.text}"`);
   for (const question of questions) {
     const parsedQuestion = parseQuestion(question);
     // console.log({ question });
     // console.log({ parsedQuestion });
 
-    // console.log(questionData.questionText, '===', parsedQuestion.Html);
-    // console.log(questionData.questionText, '===', parsedQuestion.Text);
-    // console.log(questionData.questionText === parsedQuestion.Html || questionData.questionText === parsedQuestion.Text);
-    if (questionData.questionText === parsedQuestion.Html || questionData.questionText === parsedQuestion.Text) {
-      const treeWalker = document.createTreeWalker(choicesSection, NodeFilter.SHOW_ELEMENT);
+    // console.log(questionSection.text, '===', parsedQuestion.Html);
+    // console.log(questionSection.text, '===', parsedQuestion.Text);
+    // console.log(questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text);
+    if (questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text) {
+      const treeWalker = document.createTreeWalker(questionSection.answerSection, NodeFilter.SHOW_ELEMENT);
       while (treeWalker.nextNode()) {
         if (treeWalker.currentNode instanceof HTMLParagraphElement) {
           if (treeWalker.parentNode()) {
@@ -286,11 +306,10 @@ function answerCurrentQuestion() {
           }
         }
       }
+      return;
     }
   }
 }
-
-const domParser = new DOMParser();
 function parseQuestion(question: Question) {
   const questionHtml = domParser.parseFromString(question.body[0].html ?? '', 'text/html').documentElement.textContent?.trim();
   const questionText = question.body[0].text ?? '';
@@ -311,11 +330,6 @@ function parseQuestion(question: Question) {
     Text: questionText !== '' ? questionText : undefined,
     Type: question.type,
   };
-}
-
-function isVisible(element: Element) {
-  const { width, height } = element.getBoundingClientRect();
-  return !(width === 0 && height === 0);
 }
 
 // function postAllAnswers(csrf, assignment, remainingQuestions, attemptId, total) {

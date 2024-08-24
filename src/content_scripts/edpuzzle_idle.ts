@@ -58,7 +58,7 @@ class QuestionSection {
     this.textElement.removeEventListener('click', this.handler);
   }
   private handler = () => {
-    console.log('paragraph clicked:', this.textElement);
+    // console.log('paragraph clicked:', this.textElement);
     markCorrectAnswers(this);
   };
 }
@@ -198,7 +198,7 @@ async function getQuestions(mediaId?: string): Promise<void> {
 async function unlockTimeline(data: AssignmentData, version: string): Promise<void> {
   if (timelineUnlocked || (data.timeIntervals.at(-1)?.views ?? 0) > 0) {
     timelineUnlocked = true;
-    console.log('Already Unlocked');
+    // console.log('Already Unlocked');
   } else {
     const csrf_response = await fetch('https://edpuzzle.com/api/v3/csrf');
     const csrf_body = await csrf_response.json();
@@ -315,8 +315,8 @@ async function markCorrectAnswers(questionSection: QuestionSection) {
 
   //  console.log(`Looking for Question Text "${questionSection.text}"`);
   for (const question of questions) {
+    // console.log({ question });
     const parsedQuestion = parseQuestion(question);
-    //  console.log({ question });
     //  console.log({ parsedQuestion });
 
     //  console.log(questionSection.text, '===', parsedQuestion.Html);

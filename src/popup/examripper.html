@@ -123,7 +123,7 @@
         display: block;
         width: 80%;
         margin: 20px auto;
-        color: #e0e0e0;
+        color: #F8F8F2;
         transition:
           background-color 0.3s,
           transform 0.3s;
@@ -139,7 +139,7 @@
         left: 0;
         width: 0;
         height: 4px;
-        background-color: #e0e0e0;
+        background-color: #F8F8F2;
         transition: width 0.3s;
       }
       .start-button.solving-button {
@@ -271,7 +271,7 @@
         display: inline-block;
         padding: 10px 20px;
         background-color: #7d7898ff;
-        color: #e0e0e0;
+        color: #F8F8F2;
         cursor: pointer;
         transition:
           background-color 0.3s,
@@ -362,7 +362,7 @@
       }
       .error-message {
         background-color: #ff4d4d;
-        color: #ffffff;
+        color: #F8F8F2;
         padding: 10px;
         margin-bottom: 20px;
         border-radius: 5px;
@@ -480,88 +480,6 @@
         <button class="stop-button" id="stop-button"><i class="fa-solid fa-stop"></i></button>
       </div>
     </div>
-    <script>
-      class ProgressController {
-        constructor() {
-          this.totalSteps = 0;
-          this.currentStep = 0;
-          this.isSolving = false; // Boolean to track whether it is currently solving
-          this.startButton = document.getElementById('start-button');
-          this.progressBar = document.getElementById('progress-bar');
-          this.buttonText = document.getElementById('button-text');
-          this.stopButton = document.querySelector('.stop-button');
-          this.errorMessage = document.getElementById('error-message'); // New property for error message element
-          this.errorText = document.getElementById('error-text'); // New property for error text element
-          this.errorLink = document.getElementById('error-link'); // New property for error link element
-        }
-
-        startSolving(step = 0) {
-          this.currentStep = step;
-          this.isSolving = true;
-          this.startButton.classList.add('solving-button');
-          this.buttonText.innerHTML = 'Solving...';
-          this.stopButton.style.display = 'block';
-          this.updateProgressBar();
-        }
-
-        incrementStep() {
-          if (this.currentStep < this.totalSteps) {
-            this.currentStep++;
-            this.updateProgressBar();
-            if (this.currentStep === this.totalSteps) {
-              this.markAsSolved();
-            }
-          }
-        }
-
-        markAsSolved() {
-          this.startButton.classList.remove('solving-button');
-          this.startButton.classList.add('solved-button');
-          this.buttonText.innerHTML = '<i class="fas fa-check icon"></i> Solved';
-          this.progressBar.style.width = '100%';
-          this.stopButton.style.display = 'none';
-          this.isSolving = false;
-        }
-
-        updateProgressBar() {
-          const progress = (this.currentStep / this.totalSteps) * 100;
-          this.progressBar.style.width = `${progress}%`;
-        }
-
-        stopSolving() {
-          this.currentStep = 0;
-          this.isSolving = false;
-          this.startButton.classList.remove('solving-button', 'solved-button');
-          this.buttonText.innerHTML = 'Start';
-          this.progressBar.style.width = '0%';
-          this.stopButton.style.display = 'none';
-        }
-        /**
-         *
-         * @param {number} steps
-         */
-        setTotalSteps(steps) {
-          this.totalSteps = steps;
-        }
-
-        // Method to check if it is currently solving
-        isCurrentlySolving() {
-          return this.isSolving;
-        }
-        displayError(message, link) {
-          this.errorText.textContent = message;
-          this.errorLink.href = link;
-          this.errorMessage.style.display = 'block';
-        }
-
-        // New method to hide error message
-        hideError() {
-          this.errorMessage.style.display = 'none';
-        }
-      }
-
-      // Example usage:
-      const progressController = new ProgressController(10); // Define the number of total steps
-    </script>
+    
   </body>
 </html>

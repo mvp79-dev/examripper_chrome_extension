@@ -46,20 +46,20 @@ interface Question {
 
 class QuestionSection {
   constructor(
-    public paragraph: HTMLParagraphElement,
+    public textElement: HTMLElement,
     public text: string,
     public answerSection: HTMLElement,
   ) {
-    paragraph.style.setProperty('cursor', 'pointer');
-    paragraph.addEventListener('click', this.handler);
+    textElement.style.setProperty('cursor', 'pointer');
+    textElement.addEventListener('click', this.handler);
   }
   public cleanup() {
-    this.paragraph.style.removeProperty('cursor');
-    this.paragraph.removeEventListener('click', this.handler);
+    this.textElement.style.removeProperty('cursor');
+    this.textElement.removeEventListener('click', this.handler);
   }
   private handler = () => {
-    console.log('paragraph clicked:', this.paragraph);
-    answerQuestion(this);
+    console.log('paragraph clicked:', this.textElement);
+    markCorrectAnswers(this);
   };
 }
 
@@ -88,9 +88,12 @@ async function onMessageHandler(message: Message) {
       case MessageAction.Edpuzzle_ClickToAnswer:
         click_to_answer.set(message.data.enabled);
         break;
+      case MessageAction.Edpuzzle_SubmitAllAnswers:
+        submitAllAnswers(await assignment_data.get(), await edpuzzle_version.get());
+        break;
     }
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 }
 
@@ -99,7 +102,6 @@ async function onInit() {
     await getAssignmentData(await page_webrequest.get());
     await getQuestions((await assignment_data.get()).mediaId);
     click_to_answer.subscribe((enabled) => {
-      console.log('click_to_answer:', enabled);
       if (enabled === true) {
         setupQuestionObserver();
       } else {
@@ -107,7 +109,7 @@ async function onInit() {
       }
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 }
 
@@ -220,7 +222,6 @@ async function unlockTimeline(data: AssignmentData, version: string): Promise<vo
 }
 
 async function setupQuestionObserver() {
-  console.log('setupQuestionObserver');
   if ((await questionObserver_unsubscribe.get()) === undefined) {
     questionObserver_unsubscribe.set(
       new ChildListObserver({}).subscribe((record) => {
@@ -238,7 +239,6 @@ async function setupQuestionObserver() {
 }
 function tryAddQuestionSection(headerSection: Node) {
   if (headerSection instanceof HTMLElement && headerSection.matches("section[aria-label^='Question']")) {
-    console.log('tryAddQuestionSection', { headerSection });
     if (!questionHeaderToSection_map.has(headerSection)) {
       const header = headerSection.parentElement;
       if (!(header instanceof HTMLElement && header.tagName === 'HEADER')) {
@@ -251,11 +251,14 @@ function tryAddQuestionSection(headerSection: Node) {
         return;
       }
       for (const questionParagraph of header.querySelectorAll('p')) {
-        const questionText = questionParagraph.textContent?.trim() ?? '';
-        if (questionText !== '') {
-          questionHeaderToSection_map.set(headerSection, new QuestionSection(questionParagraph, questionText, answerSection));
-          // console.log('questionSection added');
-          return;
+        const textElement = questionParagraph.parentElement;
+        if (textElement) {
+          const text = textElement.textContent?.trim() ?? '';
+          if (text !== '') {
+            questionHeaderToSection_map.set(headerSection, new QuestionSection(textElement, text, answerSection));
+            // console.log('questionSection added');
+            return;
+          }
         }
       }
       // console.log('questionText not found');
@@ -263,52 +266,12 @@ function tryAddQuestionSection(headerSection: Node) {
   }
 }
 async function cleanupQuestionObserver() {
-  console.log('cleanupQuestionObserver');
   (await questionObserver_unsubscribe.get())?.();
   questionObserver_unsubscribe.set(undefined);
   for (const [, section] of questionHeaderToSection_map) {
     section.cleanup();
   }
   questionHeaderToSection_map.clear();
-}
-async function answerQuestion(questionSection: QuestionSection) {
-  // console.log('answerQuestion', { questions_array });
-  const questions = await questions_array.get();
-  if (!questions) return;
-
-  // console.log(`Looking for Question Text "${questionSection.text}"`);
-  for (const question of questions) {
-    const parsedQuestion = parseQuestion(question);
-    // console.log({ question });
-    // console.log({ parsedQuestion });
-
-    // console.log(questionSection.text, '===', parsedQuestion.Html);
-    // console.log(questionSection.text, '===', parsedQuestion.Text);
-    // console.log(questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text);
-    if (questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text) {
-      const treeWalker = document.createTreeWalker(questionSection.answerSection, NodeFilter.SHOW_ELEMENT);
-      while (treeWalker.nextNode()) {
-        if (treeWalker.currentNode instanceof HTMLParagraphElement) {
-          if (treeWalker.parentNode()) {
-            const choiceText = treeWalker.currentNode.textContent?.trim();
-            for (const choice of parsedQuestion.Choices) {
-              // console.log(choiceText, '===', choice.Html);
-              // console.log(choiceText, '===', choice.Text);
-              if (choiceText === choice.Html || choiceText === choice.Text) {
-                // console.log(`isCorrect: ${choice.IsCorrect}`);
-                if (choice.IsCorrect) {
-                  treeWalker.currentNode.click();
-                  // console.log('clicked');
-                }
-              }
-            }
-            treeWalker.lastChild();
-          }
-        }
-      }
-      return;
-    }
-  }
 }
 function parseQuestion(question: Question) {
   const questionHtml = domParser.parseFromString(question.body[0].html ?? '', 'text/html').documentElement.textContent?.trim();
@@ -331,47 +294,105 @@ function parseQuestion(question: Question) {
     Type: question.type,
   };
 }
+async function markCorrectAnswers(questionSection: QuestionSection) {
+  // console.log('questions_array:', questions_array);
+  const questions = await questions_array.get();
+  if (!questions) return;
 
-// function postAllAnswers(csrf, assignment, remainingQuestions, attemptId, total) {
-//   var id = assignment.teacherAssignments[0]._id;
-//   var referrer = "https://edpuzzle.com/assignments/"+id+"/watch";
-//   var answersURL = "https://edpuzzle.com/api/v3/attempts/"+attemptId+"/answers";
+  /** // TODO
+   * Some questions can have the exact same question text. It stands to follow
+   * that some questions can have both the same question text AND choices. All
+   * of these have unique IDs, but these IDs are not included with the HTML of
+   * either questions or answers. This isn't an issue when posting answers
+   * programmatically, but it is a definite challenge when marking the correct
+   * answer choices during user interaction.
+   *
+   * The only potential workaround I can think of is to match the question's
+   * `time` property to the `currentTime` property of the video element. They
+   * seem to be exact matches. The video element resides in an iframe, so
+   * accessing it will pose another difficult challenge.
+   */
 
-//   var content = {answers: []};
-//   var now = new Date().toISOString();
-//   var questionsPart = remainingQuestions.shift();
-//   for (let i=0; i<questionsPart.length; i++) {
-//     let question = questionsPart[i];
-//     let correctChoices = [];
-//     for (let j=0; j<question.choices.length; j++) {
-//       let choice = question.choices[j];
-//       if (choice.isCorrect) {
-//         correctChoices.push(choice._id)
-//       }
-//     }
-//     content.answers.push({
-//       "questionId": question._id,
-//       "choices": correctChoices,
-//       "type": "multiple-choice",
-//     });
-//   }
+  //  console.log(`Looking for Question Text "${questionSection.text}"`);
+  for (const question of questions) {
+    const parsedQuestion = parseQuestion(question);
+    //  console.log({ question });
+    //  console.log({ parsedQuestion });
 
-//   var headers = [
-//     ['accept', 'application/json, text/plain, */*'],
-//     ['accept_language', 'en-US,en;q=0.9'],
-//     ['content-type', 'application/json'],
-//     ['x-csrf-token', csrf],
-//     ['x-edpuzzle-referrer', referrer],
-//     ['x-edpuzzle-web-version', opener.__EDPUZZLE_DATA__.version]
-//   ];
-//   httpGet(answersURL, function() {
-//     if (remainingQuestions.length == 0) {
-//       button.value = "Answers submitted successfully.";
-//       opener.location.reload();
-//     }
-//     else {
-//       button.value = `Posting answers... (${total-remainingQuestions.length+1}/${total})`;
-//       postAllAnswers(csrf, assignment, remainingQuestions, attemptId, total);
-//     }
-//   }, headers, "POST", JSON.stringify(content));
-// }
+    //  console.log(questionSection.text, '===', parsedQuestion.Html);
+    //  console.log(questionSection.text, '===', parsedQuestion.Text);
+    //  console.log(questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text);
+    if (questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text) {
+      const treeWalker = document.createTreeWalker(questionSection.answerSection, NodeFilter.SHOW_ELEMENT);
+      while (treeWalker.nextNode()) {
+        if (treeWalker.currentNode instanceof HTMLParagraphElement) {
+          if (treeWalker.parentNode()) {
+            const choiceText = treeWalker.currentNode.textContent?.trim();
+            for (const choice of parsedQuestion.Choices) {
+              //  console.log(choiceText, '===', choice.Html);
+              //  console.log(choiceText, '===', choice.Text);
+              if (choiceText === choice.Html || choiceText === choice.Text) {
+                //  console.log(`isCorrect: ${choice.IsCorrect}`);
+                if (choice.IsCorrect) {
+                  treeWalker.currentNode.click();
+                  //  console.log('clicked');
+                }
+              }
+            }
+            treeWalker.lastChild();
+          }
+        }
+      }
+    }
+  }
+}
+
+async function submitAllAnswers(data: AssignmentData, version: string): Promise<void> {
+  // find out which questions have already been answered
+  const attempt_response = await fetch(`https://edpuzzle.com/api/v3/assignments/${data.teacherAssignmentId}/attempt`, {
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'x-edpuzzle-web-version': version,
+      'x-edpuzzle-referrer': `https://edpuzzle.com/assignments/${data.teacherAssignmentId}/watch`,
+    },
+  });
+  const attempt_body = await attempt_response.json();
+  const answered_question_ids = new Set<string>();
+  for (const answer of attempt_body.answers) {
+    answered_question_ids.add(answer.questionId);
+  }
+
+  // answer remaining questions
+  for (const question of await questions_array.get()) {
+    if (!answered_question_ids.has(question._id)) {
+      const csrf_response = await fetch('https://edpuzzle.com/api/v3/csrf');
+      const csrf_body = await csrf_response.json();
+      if (!csrf_body.CSRFToken) {
+        throw 'Missing { CSRFToken }';
+      }
+      await fetch(`https://edpuzzle.com/api/v3/attempts/${data._id}/answers`, {
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Content-Type': 'application/json',
+          'x-edpuzzle-web-version': version,
+          'x-edpuzzle-referrer': `https://edpuzzle.com/assignments/${data.teacherAssignmentId}/watch`,
+          'x-csrf-token': csrf_body.CSRFToken,
+        },
+        body: JSON.stringify({
+          answers: [
+            {
+              type: question.type, //
+              questionId: question._id,
+              choices: question.choices.filter((_) => _.isCorrect).map((_) => _._id),
+            },
+          ],
+        }),
+        method: 'POST',
+      });
+      await Sleep(500);
+    }
+  }
+}

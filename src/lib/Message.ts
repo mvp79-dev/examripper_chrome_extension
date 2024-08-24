@@ -6,6 +6,7 @@ export enum MessageAction {
   Edpuzzle_ClickToAnswer = 'Edpuzzle_ClickToAnswer',
   Edpuzzle_GetClickToAnswer = 'Edpuzzle_GetClickToAnswer',
   Edpuzzle_UnlockTimeline = 'Edpuzzle_UnlockTimeline',
+  Edpuzzle_SubmitAllAnswers = 'Edpuzzle_SubmitAllAnswers',
 }
 
 export type Message =
@@ -13,7 +14,8 @@ export type Message =
   | { action: MessageAction.Edpuzzle_GetWebRequest }
   | { action: MessageAction.Edpuzzle_ClickToAnswer; data: { enabled: boolean } }
   | { action: MessageAction.Edpuzzle_GetClickToAnswer }
-  | { action: MessageAction.Edpuzzle_UnlockTimeline };
+  | { action: MessageAction.Edpuzzle_UnlockTimeline }
+  | { action: MessageAction.Edpuzzle_SubmitAllAnswers };
 
 export function Message<T extends Message['action']>(
   action: T,

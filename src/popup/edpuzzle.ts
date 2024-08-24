@@ -20,3 +20,11 @@ btnUnlockTimeline.addEventListener('click', () => {
     if (tabs[0].id) chrome.tabs.sendMessage(tabs[0].id, Message(MessageAction.Edpuzzle_UnlockTimeline, {}));
   });
 });
+
+const btnSubmitAnswers = document.getElementById('submit-answers');
+if (!(btnSubmitAnswers instanceof HTMLButtonElement)) throw 'btnSubmitAnswers is null';
+btnSubmitAnswers.addEventListener('click', () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0].id) chrome.tabs.sendMessage(tabs[0].id, Message(MessageAction.Edpuzzle_SubmitAllAnswers, {}));
+  });
+});

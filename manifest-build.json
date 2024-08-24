@@ -1,0 +1,21 @@
+{
+  "Chrome": {
+    "background": {
+      "service_worker": "background.js",
+      "type": "module"
+    },
+    "minimum_chrome_version": "120"
+  },
+  "Firefox": {
+    "background": {
+      "scripts": ["background.js"],
+      "type": "module"
+    },
+    "browser_specific_settings": {
+      "gecko": {
+        "strict_min_version": "120.0"
+      },
+      "gecko_android": {}
+    }
+  }
+}

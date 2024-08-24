@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam Ripper - Apex</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="/popup/examripper.js" defer></script>
+
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #1d1c1cff;
+        color: #a99dfaff;
+        text-align: center;
+        margin: 0;
+        padding: 10px;
+        font-size: 16px;
+      }
+      .container {
+        margin: auto;
+        padding: 20px;
+        background-color: #2b292eff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        width: 90%;
+        min-width: 350px;
+        position: relative;
+        overflow: hidden;
+      }
+      .container::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(45deg, #7d7898ff, #a99dfaff);
+        animation: gradient 10s ease infinite;
+        z-index: -1;
+      }
+      @keyframes gradient {
+        0% {
+          transform: translate(0%, 0%);
+        }
+        50% {
+          transform: translate(50%, 50%);
+        }
+        100% {
+          transform: translate(0%, 0%);
+        }
+      }
+      .logo {
+        height: 60px;
+        margin: 10px auto;
+        display: block;
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      h1,
+      p,
+      label {
+        font-weight: 600;
+        margin: 10px 0;
+        color: #a99dfaff;
+      }
+      .status-message {
+        color: #7d7898ff;
+        margin-bottom: 15px;
+      }
+      .slider-container {
+        margin: 20px auto;
+        position: relative;
+        width: 90%;
+      }
+      .tooltip {
+        position: absolute;
+        right: 0px;
+        top: 3px;
+        font-size: 16px;
+      }
+      input[type='range'] {
+        width: 100%;
+        height: 8px;
+        border-radius: 5px;
+        background: #7d7898ff;
+        outline: none;
+        appearance: none;
+        transition: background 0.3s;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #a99dfaff;
+        cursor: pointer;
+        transition: transform 0.3s;
+      }
+      input[type='range']::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+      }
+      .start-button {
+        position: relative;
+        background-color: #66bd77;
+        border: none;
+        padding: 15px 20px;
+        font-size: 18px;
+        cursor: pointer;
+        border-radius: 8px;
+        display: block;
+        width: 80%;
+        margin: 20px auto;
+        color: #e0e0e0;
+        transition:
+          background-color 0.3s,
+          transform 0.3s;
+        overflow: hidden;
+      }
+      .start-button:hover {
+        background-color: #56a365;
+        transform: translateY(-2px);
+      }
+      #progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 4px;
+        background-color: #e0e0e0;
+        transition: width 0.3s;
+      }
+      .start-button.solving-button {
+        background-color: #fca414;
+      }
+      .start-button.solved-button {
+        background-color: #a9a9a9;
+        cursor: not-allowed;
+      }
+
+      .stop-button {
+        background-color: #ef7064;
+        color: #ffffff;
+        border: none;
+        border-radius: 10%;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        display: none;
+        padding: 15px 20px;
+        font-size: 20px;
+        border-radius: 8px;
+        width: 20%;
+        margin: 20px auto;
+        animation: popIn 0.5s ease-in-out;
+      }
+
+      .stop-button:hover {
+        background-color: #e55c51;
+      }
+
+      @keyframes popIn {
+        0% {
+          transform: scale(0);
+          opacity: 0;
+        }
+        80% {
+          transform: scale(1.1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+
+      @keyframes fadeInUp {
+        0% {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .start-button.solved-button {
+        background-color: #a9a9a9;
+        cursor: not-allowed;
+        animation: glow 1s ease-in-out;
+      }
+
+      @keyframes glow {
+        0% {
+          box-shadow: 0 0 5px rgba(169, 169, 169, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 20px rgba(169, 169, 169, 0.7);
+        }
+        100% {
+          box-shadow: 0 0 5px rgba(169, 169, 169, 0.7);
+        }
+      }
+
+      @keyframes iconAnimation {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      .tooltip .tooltip-text {
+        visibility: hidden;
+        width: 280px;
+        background-color: #1d1c1cff;
+        color: #a99dfaff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 0;
+        position: absolute;
+        z-index: 1;
+        bottom: 25px;
+        right: calc(100% + 10px);
+        margin-right: 1px;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+      }
+      .current-value {
+        color: #7d7898ff;
+        font-weight: bold;
+      }
+      .button-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+      }
+      .subject-selection {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 20px 0;
+      }
+
+      .subject-selection input[type='radio'] {
+        display: none;
+      }
+
+      .subject-selection label {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #7d7898ff;
+        color: #e0e0e0;
+        cursor: pointer;
+        transition:
+          background-color 0.3s,
+          transform 0.3s;
+        border-right: 1px solid #1d1c1cff;
+        margin: 0; /* Added this to remove any gap */
+      }
+
+      .subject-selection label:first-child {
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 5px;
+      }
+
+      .subject-selection label:last-child {
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 5px;
+        border-right: none;
+      }
+
+      .subject-selection input[type='radio']:checked + label {
+        background-color: #a99dfaff;
+        color: #1d1c1cff;
+        transform: scale(1.1);
+      }
+
+      .subject-radio {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        border: 3px solid #a99dfaff;
+        border-radius: 8px;
+        background: #1d1c1cff;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .subject-radio input[type='radio'] {
+        display: none;
+      }
+
+      .subject-radio label {
+        flex: 1;
+        padding: 10px;
+        text-align: center;
+        background: #2b292eff;
+        cursor: pointer;
+        color: #a99dfaff;
+        transition: background 0.3s;
+        margin: 0; /* Added this to remove any gap */
+      }
+
+      .subject-radio input[type='radio']:checked + label {
+        background: #a99dfaff;
+        color: #1d1c1cff;
+      }
+
+      .subject-radio::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 20%;
+        background: #a99dfaff;
+        transition: transform 0.3s;
+        transform: translateX(-100%);
+      }
+
+      .subject-radio input[type='radio']:checked ~ ::before {
+        transform: translateX(calc((100% / 5) * (var(--i) - 1)));
+      }
+
+      .subject-radio #history:checked ~ ::before {
+        --i: 1;
+      }
+      .subject-radio #science:checked ~ ::before {
+        --i: 2;
+      }
+      .subject-radio #english:checked ~ ::before {
+        --i: 3;
+      }
+      .subject-radio #math:checked ~ ::before {
+        --i: 4;
+      }
+      .subject-radio #spanish:checked ~ ::before {
+        --i: 5;
+      }
+      .error-message {
+        background-color: #ff4d4d;
+        color: #ffffff;
+        padding: 10px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+        display: none;
+        text-align: center;
+        font-weight: bold;
+        animation: fadeIn 0.5s ease-in-out;
+        text-decoration: none;
+      }
+
+      @keyframes fadeIn {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .brainly-option {
+        margin-top: 10px;
+        text-align: center;
+        color: #a99dfaff;
+      }
+
+      .brainly-option label {
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .brainly-option .tooltip {
+        margin-left: 5px;
+        font-size: 14px;
+        position: relative;
+        display: inline-block;
+      }
+
+      .brainly-option .tooltip .tooltip-text {
+        visibility: hidden;
+        width: 200px;
+        background-color: #1d1c1cff;
+        color: #a99dfaff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 0;
+        position: absolute;
+        z-index: 1;
+        bottom: 25px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .brainly-option .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <img src="../icons/icon128.png" alt="Logo" class="logo" />
+      <h1>Exam Loaded</h1>
+      <p class="status-message" id="quiz-title">Ready to start your exam</p>
+      <div class="subject-radio">
+        <input type="radio" id="history" name="subject" value="History" />
+        <label for="history">History</label>
+        <input type="radio" id="science" name="subject" value="Science" />
+        <label for="science">Science</label>
+        <input type="radio" id="english" name="subject" value="English" />
+        <label for="english">English</label>
+        <input type="radio" id="math" name="subject" value="Math" />
+        <label for="math">Math</label>
+        <input type="radio" id="spanish" name="subject" value="Spanish" />
+        <label for="spanish">Spanish</label>
+      </div>
+
+      <div class="brainly-option">
+        <input type="checkbox" id="use-brainly" name="use-brainly" />
+        <label for="use-brainly">
+          Use Brainly (BETA)
+          <span class="tooltip">
+            <i class="fas fa-question-circle"></i>
+            <div class="tooltip-text">Uses Brainly for results. This is in beta and will increase the time in between answering questions.</div>
+          </span>
+        </label>
+      </div>
+
+      <div class="slider-container">
+        <label for="action-interval-slider">
+          Action Interval Duration:
+          <span class="current-value" id="current-value">3s</span>
+          <span class="tooltip">
+            <i class="fas fa-question-circle"></i>
+            <div class="tooltip-text">Amount of time to stall in between actions (Clicking answer, submitting, etc)</div>
+          </span>
+        </label>
+        <div class="slider-with-labels">
+          <input type="range" id="action-interval-slider" name="action-interval-slider" min="0.5" max="6.0" value="1.0" step="0.25" />
+        </div>
+      </div>
+      <div id="error-message" class="error-message">
+        <a id="error-link" href="https://google.com" target="_blank">
+          <span id="error-text"></span>
+        </a>
+      </div>
+
+      <div class="button-container">
+        <button id="start-button" class="start-button">
+          <span id="button-text">Start</span>
+          <div id="progress-bar"></div>
+        </button>
+        <button class="stop-button" id="stop-button"><i class="fa-solid fa-stop"></i></button>
+      </div>
+    </div>
+    <script>
+      class ProgressController {
+        constructor() {
+          this.totalSteps = 0;
+          this.currentStep = 0;
+          this.isSolving = false; // Boolean to track whether it is currently solving
+          this.startButton = document.getElementById('start-button');
+          this.progressBar = document.getElementById('progress-bar');
+          this.buttonText = document.getElementById('button-text');
+          this.stopButton = document.querySelector('.stop-button');
+          this.errorMessage = document.getElementById('error-message'); // New property for error message element
+          this.errorText = document.getElementById('error-text'); // New property for error text element
+          this.errorLink = document.getElementById('error-link'); // New property for error link element
+        }
+
+        startSolving(step = 0) {
+          this.currentStep = step;
+          this.isSolving = true;
+          this.startButton.classList.add('solving-button');
+          this.buttonText.innerHTML = 'Solving...';
+          this.stopButton.style.display = 'block';
+          this.updateProgressBar();
+        }
+
+        incrementStep() {
+          if (this.currentStep < this.totalSteps) {
+            this.currentStep++;
+            this.updateProgressBar();
+            if (this.currentStep === this.totalSteps) {
+              this.markAsSolved();
+            }
+          }
+        }
+
+        markAsSolved() {
+          this.startButton.classList.remove('solving-button');
+          this.startButton.classList.add('solved-button');
+          this.buttonText.innerHTML = '<i class="fas fa-check icon"></i> Solved';
+          this.progressBar.style.width = '100%';
+          this.stopButton.style.display = 'none';
+          this.isSolving = false;
+        }
+
+        updateProgressBar() {
+          const progress = (this.currentStep / this.totalSteps) * 100;
+          this.progressBar.style.width = `${progress}%`;
+        }
+
+        stopSolving() {
+          this.currentStep = 0;
+          this.isSolving = false;
+          this.startButton.classList.remove('solving-button', 'solved-button');
+          this.buttonText.innerHTML = 'Start';
+          this.progressBar.style.width = '0%';
+          this.stopButton.style.display = 'none';
+        }
+        /**
+         *
+         * @param {number} steps
+         */
+        setTotalSteps(steps) {
+          this.totalSteps = steps;
+        }
+
+        // Method to check if it is currently solving
+        isCurrentlySolving() {
+          return this.isSolving;
+        }
+        displayError(message, link) {
+          this.errorText.textContent = message;
+          this.errorLink.href = link;
+          this.errorMessage.style.display = 'block';
+        }
+
+        // New method to hide error message
+        hideError() {
+          this.errorMessage.style.display = 'none';
+        }
+      }
+
+      // Example usage:
+      const progressController = new ProgressController(10); // Define the number of total steps
+    </script>
+  </body>
+</html>

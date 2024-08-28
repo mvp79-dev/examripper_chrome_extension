@@ -1154,7 +1154,7 @@ function DndSimulatorDataTransfer() {
      *                        dragged to.
      */
 
-    /** This function was modified by ericchase.
+    /** [Minor Modification]
      * @param {Element|string|null} sourceElement - Element | querySelector string
      * @param {Element|string|null} targetElement - Element | querySelector string
      */
@@ -1168,7 +1168,7 @@ function DndSimulatorDataTransfer() {
         targetElement = document.querySelector(targetElement);
       }
 
-      /// [Minor Modification] Added by ericchase:
+      /// [Minor Modification]
       if (sourceElement && targetElement) {
       } else return;
 

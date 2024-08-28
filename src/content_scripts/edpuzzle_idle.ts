@@ -1,8 +1,8 @@
-import { Sleep } from '../lib/ericchase/Algorithm/Sleep.js';
-import { Once, Optional } from '../lib/ericchase/Design Pattern/Observer/Store.js';
-import { type WebRequest, RebuildAndSendRequest } from '../lib/ericchase/Platform/Browser/Extension/WebRequest.js';
-import { ChildListObserver } from '../lib/ericchase/Platform/Web/DOM/MutationObserver/ChildList.js';
-import { ElementAddedObserver } from '../lib/ericchase/Platform/Web/DOM/MutationObserver/ElementAdded.js';
+import { Sleep } from '../lib/external/Algorithm/Sleep.js';
+import { Once, Optional } from '../lib/external/Design Pattern/Observer/Store.js';
+import { type WebRequest, RebuildAndSendRequest } from '../lib/external/Platform/Browser/Extension/WebRequest.js';
+import { ChildListObserver } from '../lib/external/Platform/Web/DOM/MutationObserver/ChildList.js';
+import { ElementAddedObserver } from '../lib/external/Platform/Web/DOM/MutationObserver/ElementAdded.js';
 import { Message, MessageAction } from '../lib/Message.js';
 
 interface AssignmentData {

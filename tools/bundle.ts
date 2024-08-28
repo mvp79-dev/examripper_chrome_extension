@@ -1,11 +1,11 @@
 import { normalize as normalizePath } from 'node:path';
 
 import { buildConfig } from '../addon-config.js';
-import { ToSnakeCase } from '../src/lib/ericchase/Algorithm/String/Convert/Case.js';
-import { Config, GetSemanticVersion, type POJO } from '../src/lib/ericchase/Platform/Browser/Extension/Config.js';
-import { CopyFile } from '../src/lib/ericchase/Platform/Bun/Fs.js';
-import { DeleteDirectory } from '../src/lib/ericchase/Platform/Node/Fs.js';
-import { JobQueue } from '../src/lib/ericchase/Utility/JobQueue.js';
+import { ToSnakeCase } from '../src/lib/external/Algorithm/String/Convert/Case.js';
+import { Config, GetSemanticVersion, type POJO } from '../src/lib/external/Platform/Browser/Extension/Config.js';
+import { CopyFile } from '../src/lib/external/Platform/Bun/Fs.js';
+import { DeleteDirectory } from '../src/lib/external/Platform/Node/Fs.js';
+import { JobQueue } from '../src/lib/external/Utility/JobQueue.js';
 import { build } from './lib/builds.js';
 import { compile } from './lib/compile.js';
 

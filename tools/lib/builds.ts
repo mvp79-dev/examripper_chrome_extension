@@ -1,10 +1,10 @@
 import { normalize as normalizePath } from 'node:path';
 
 import { buildConfig } from '../../addon-config.js';
-import { Config, GetSemanticVersion, type POJO } from '../../src/lib/ericchase/Platform/Browser/Extension/Config.js';
-import { CopyFile } from '../../src/lib/ericchase/Platform/Bun/Fs.js';
-import { DeleteDirectory } from '../../src/lib/ericchase/Platform/Node/Fs.js';
-import { JobQueue } from '../../src/lib/ericchase/Utility/JobQueue.js';
+import { Config, GetSemanticVersion, type POJO } from '../../src/lib/external/Platform/Browser/Extension/Config.js';
+import { CopyFile } from '../../src/lib/external/Platform/Bun/Fs.js';
+import { DeleteDirectory } from '../../src/lib/external/Platform/Node/Fs.js';
+import { JobQueue } from '../../src/lib/external/Utility/JobQueue.js';
 
 export async function build(buildDir: string = './build', toCopy: Map<string, Set<string>>) {
   // Init

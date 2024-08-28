@@ -1,8 +1,8 @@
 import { normalize as normalizePath } from 'node:path';
 
 import { buildConfig } from '../../addon-config.js';
-import { DeleteDirectory } from '../../src/lib/ericchase/Platform/Node/Fs.js';
-import { ParsePath } from '../../src/lib/ericchase/Platform/Node/Path.js';
+import { DeleteDirectory } from '../../src/lib/external/Platform/Node/Fs.js';
+import { ParsePath } from '../../src/lib/external/Platform/Node/Path.js';
 import { getBaseToPathsMap } from './AddonConfig.js';
 
 function addReplaceExtension(path: string, matchExtList: string[], newExt: string) {

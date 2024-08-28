@@ -1,4 +1,4 @@
-import type { WebRequest } from './ericchase/Platform/Browser/Extension/WebRequest.js';
+import type { WebRequest } from './external/Platform/Browser/Extension/WebRequest.js';
 
 export enum MessageAction {
   Edpuzzle_WebRequest = 'Edpuzzle_WebRequest',

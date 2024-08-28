@@ -1,5 +1,5 @@
-import { GlobSearch } from './lib/ericchase/Algorithm/String/Search/GlobSearch.js';
-import { WebRequestCache } from './lib/ericchase/Platform/Browser/Extension/WebRequest.js';
+import { GlobSearch } from './lib/external/Algorithm/String/Search/GlobSearch.js';
+import { WebRequestCache } from './lib/external/Platform/Browser/Extension/WebRequest.js';
 import { Message, MessageAction } from './lib/Message.js';
 
 chrome.runtime.onInstalled.addListener(function (details) {

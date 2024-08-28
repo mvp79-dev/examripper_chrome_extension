@@ -1,8 +1,8 @@
 import { normalize as normalizePath } from 'node:path';
 
 import { buildConfig } from '../addon-config.js';
-import { Debounce } from '../src/lib/ericchase/Algorithm/Debounce.js';
-import { Watch } from '../src/lib/ericchase/Platform/Cxx/Watch.js';
+import { Debounce } from '../src/lib/external/Algorithm/Debounce.js';
+import { Watch } from '../src/lib/external/Platform/Cxx/Watch.js';
 import { getBaseToPathsMap } from './lib/AddonConfig.js';
 
 const toCopy = getBaseToPathsMap(buildConfig.copy);

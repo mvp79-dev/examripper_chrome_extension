@@ -12,7 +12,7 @@ function addReplaceExtension(path: string, matchExtList: string[], newExt: strin
   }
 }
 
-export async function compile(tempDir: string = './temp', scriptExtensions = ['.ts'], sourcemap: Parameters<typeof Bun.build>[0]['sourcemap'] = 'inline') {
+export async function compile(tempDir: string = './temp', scriptExtensions = ['.ts'], sourcemap: Parameters<typeof Bun.build>[0]['sourcemap'] = 'inline', debug = true) {
   // Process
   const toBundle = getBaseToPathsMap(buildConfig.bundle, {
     transformPattern: (pattern) => {
@@ -51,6 +51,7 @@ export async function compile(tempDir: string = './temp', scriptExtensions = ['.
             sourcemap,
             splitting: false,
             target: 'browser',
+            define: { 'Bun.env.DEBUG': JSON.stringify(debug ? 'true' : 'false') },
           });
           if (success) {
             await Bun.write(normalizePath(`./${tempBase}/${tempPath}`), `(function () {\n${await outputs[0].text()}})();`);

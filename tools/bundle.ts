@@ -19,7 +19,7 @@ const tempDir = './temp';
 const scriptExtensions = ['.ts'];
 
 // Compile
-const toCopy = await compile(tempDir, scriptExtensions, 'none');
+const toCopy = await compile(tempDir, scriptExtensions, 'none', false);
 
 // Build
 await build(buildDir, toCopy);
@@ -40,7 +40,7 @@ for (const browser of buildConfig.browsers) {
     const bundleManifest = Config.mergeConfigs(buildManifest, new Config(manifest.bundle.get(browser) as POJO));
     await Bun.write(normalizePath(`./${buildDir}/${browser}/manifest.json`), bundleManifest.toJSON());
     // Archive
-    const archiveName = `${ToSnakeCase(bundleManifest.get('name') as string)}-v${bundleManifest.get('version')}.zip`;
+    const archiveName = SanitizeFilePath(`${ToSnakeCase(bundleManifest.get('name') as string)}-v${bundleManifest.get('version')}.zip`);
     const archivePath = normalizePath(`./${tempDir}/${browser}/${archiveName}`);
     const globPattern = normalizePath(`./${buildDir}/${browser}/*`);
     Bun.spawnSync(['7z', 'a', '-tzip', './' + archivePath, './' + globPattern]); // the ./ is needed here. something to do with how 7z determins pathing
@@ -63,3 +63,7 @@ await new Promise<void>((resolve) => {
 
 // Cleanup
 await DeleteDirectory(normalizePath(tempDir));
+
+function SanitizeFilePath(path: string) {
+  return path.replace(/[^a-z0-9\.\_\-]/gi, '_').toLowerCase();
+}

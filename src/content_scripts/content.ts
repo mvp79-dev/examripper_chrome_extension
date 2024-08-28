@@ -1,4 +1,6 @@
-const BASE_URL = 'https://examripper-288287396080.herokuapp.com';
+import { getBaseURL } from '../lib/macros.js' with { type: 'macro' };
+
+const BASE_URL = getBaseURL();
 
 const API_URLS = {
   checkbox: BASE_URL + '/api/image/checkbox',
@@ -71,7 +73,7 @@ class Highlighter {
   });
 
   static RuntimeConnected = true;
-  static Status = /** @type {keyof Highlighter.Status_Type} */ (Highlighter.Status_Type.Ready);
+  static Status = /** @type {keyof Highlighter.Status_Type} */ Highlighter.Status_Type.Ready;
 
   /**
    * @param {keyof Highlighter.Status_Type} new_status
@@ -805,7 +807,7 @@ class TextMatcher {
   constructor(element_list, property_names, match_list, case_sensitive = false) {
     this.element_data_list = [];
     for (const element of element_list) {
-      const element_data = { element, property_list: /** @type {string[]} */ ([]) };
+      const element_data = { element, property_list: /** @type {string[]} */ [] };
       for (const property_name of property_names) {
         if (typeof element[property_name] === 'string') {
           const text = element[property_name].trim();
@@ -1299,7 +1301,7 @@ function log_call() {
 //
 //
 
-let highlighter = /** @type{Highlighter|undefined} */ (undefined);
+let highlighter = /** @type{Highlighter|undefined} */ undefined;
 
 // content script
 

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Examripper | The best cheat bot for Apex Learning and Edpuzzle Hack ",
+  "name": "Examripper | The best cheat bot for Apex Learning and Edpuzzle Hack",
   "description": "Automatically finshes exams on websites such as Apex Learning",
   "version": "1.7.1",
   "permissions": ["activeTab", "scripting", "storage", "tabs", "webRequest"],

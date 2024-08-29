@@ -41,6 +41,10 @@
     {
       "matches": ["*://*.edpuzzle.com/*"],
       "resources": ["web_accessible_resources/edpuzzle_inject.js"]
+    },
+    {
+      "resources": ["popup/docsAutoTyper.html"],
+      "matches": ["*://docs.google.com/document/*"]
     }
   ],
   "icons": {

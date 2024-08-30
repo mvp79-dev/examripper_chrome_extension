@@ -242,12 +242,6 @@ function injectScript(
         await new Promise((resolve) => setTimeout(resolve, breakTime * 10000));
       }
 
-      if (mistakeCount < mistakeRate && wordCount % mistakeRate === 0) {
-        const typoChar = String.fromCharCode(char.charCodeAt(0) + 1);
-        await simulateTyping(inputElement, typoChar, randomDelay);
-        await simulateTyping(inputElement, "\b", randomDelay / correctionSpeed);
-        mistakeCount++;
-      }
 
       await simulateTyping(inputElement, char, randomDelay);
       if (char === " " || char === "\n") wordCount++;

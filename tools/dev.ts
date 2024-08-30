@@ -1,39 +1,33 @@
-import { normalize as normalizePath } from 'node:path';
-
 import { buildConfig } from '../addon-config.js';
-import { Debounce } from '../src/lib/external/Algorithm/Debounce.js';
-import { Watch } from '../src/lib/external/Platform/Cxx/Watch.js';
-import { getBaseToPathsMap } from './lib/AddonConfig.js';
 
-const toCopy = getBaseToPathsMap(buildConfig.copy);
-const watchSet = new Set<string>();
-for (const [base, paths] of toCopy) {
-  for (const path of paths) {
-    watchSet.add(normalizePath(`./${base}/${path}`));
+import { Debounce } from '../src/lib/external/Algorithm/Debounce.js';
+import { GlobManager } from '../src/lib/external/Platform/Bun/Path.js';
+import { Run } from '../src/lib/external/Platform/Bun/Process.js';
+import { Watcher } from '../src/lib/external/Platform/Node/Watch.js';
+
+const toCopy = new GlobManager();
+for (const [basedir, patterns] of Object.entries(buildConfig.copy)) {
+  for (const pattern of patterns) {
+    toCopy.scan(basedir, pattern);
   }
 }
+const watchSet = new Set(toCopy.paths);
 
 const runBuild = Debounce(async () => {
-  const cmd = 'bun run build';
-  console.log(`[${new Date().toLocaleTimeString()}] > ${cmd}`);
-  Bun.spawnSync(cmd.split(' '));
+  await Run('bun run build');
 }, 250);
 
 try {
-  await Watch({
-    path: '.',
-    debounce_interval: 250,
-    change_cb: (changes) => {
-      for (const change of changes) {
-        if (change[0] === 'S' || watchSet.has(change.slice(2))) {
-          runBuild();
-        }
+  const watcher = new Watcher('./', 250);
+  watcher.observe((events) => {
+    for (const event of events) {
+      if (event.filename && watchSet.has(event.filename)) {
+        runBuild();
+        break;
       }
-    },
-    error_cb: (error) => {
-      console.error('ERROR:', error);
-    },
+    }
   });
+  await watcher.done;
 } catch (error) {
-  console.error(error);
+  console.log(error);
 }

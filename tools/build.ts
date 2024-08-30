@@ -1,6 +1,5 @@
-import { normalize as normalizePath } from 'node:path';
-
 import { DeleteDirectory } from '../src/lib/external/Platform/Node/Fs.js';
+import { NormalizePath } from '../src/lib/external/Platform/Node/Path.js';
 import { build } from './lib/builds.js';
 import { compile } from './lib/compile.js';
 
@@ -16,4 +15,4 @@ const toCopy = await compile(tempDir, scriptExtensions);
 await build(buildDir, toCopy);
 
 // Cleanup
-await DeleteDirectory(normalizePath(tempDir));
+await DeleteDirectory(NormalizePath(tempDir));

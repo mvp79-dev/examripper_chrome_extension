@@ -1,10 +1,9 @@
-import { normalize as normalizePath } from 'node:path';
-
 import { buildConfig } from '../addon-config.js';
 import { ToSnakeCase } from '../src/lib/external/Algorithm/String/Convert/Case.js';
 import { Config, GetSemanticVersion, type POJO } from '../src/lib/external/Platform/Browser/Extension/Config.js';
 import { CopyFile } from '../src/lib/external/Platform/Bun/Fs.js';
 import { DeleteDirectory } from '../src/lib/external/Platform/Node/Fs.js';
+import { NormalizePath } from '../src/lib/external/Platform/Node/Path.js';
 import { JobQueue } from '../src/lib/external/Utility/JobQueue.js';
 import { build } from './lib/builds.js';
 import { compile } from './lib/compile.js';
@@ -26,11 +25,11 @@ await build(buildDir, toCopy);
 
 // Copy
 const manifest = {
-  core: await Config.readConfig(normalizePath('./manifest.json')),
-  build: await Config.readConfig(normalizePath('./manifest-build.json')),
-  bundle: args.includes('--dry') ? new Config({}) : await Config.readConfig(normalizePath('./manifest-bundle.json')),
+  core: await Config.readConfig(NormalizePath('./manifest.json')),
+  build: await Config.readConfig(NormalizePath('./manifest-build.json')),
+  bundle: args.includes('--dry') ? new Config({}) : await Config.readConfig(NormalizePath('./manifest-bundle.json')),
 };
-manifest.core.set('version', await GetSemanticVersion(normalizePath('./version.json')));
+manifest.core.set('version', await GetSemanticVersion(NormalizePath('./version.json')));
 
 const jobQueue = new JobQueue<void, string>(0);
 for (const browser of buildConfig.browsers) {
@@ -38,15 +37,15 @@ for (const browser of buildConfig.browsers) {
     // Init
     const buildManifest = Config.mergeConfigs(manifest.core, new Config(manifest.build.get(browser) as POJO));
     const bundleManifest = Config.mergeConfigs(buildManifest, new Config(manifest.bundle.get(browser) as POJO));
-    await Bun.write(normalizePath(`./${buildDir}/${browser}/manifest.json`), bundleManifest.toJSON());
+    await Bun.write(NormalizePath(`./${buildDir}/${browser}/manifest.json`), bundleManifest.toJSON());
     // Archive
     const archiveName = SanitizeFilePath(`${ToSnakeCase(bundleManifest.get('name') as string)}-v${bundleManifest.get('version')}.zip`);
-    const archivePath = normalizePath(`./${tempDir}/${browser}/${archiveName}`);
-    const globPattern = normalizePath(`./${buildDir}/${browser}/*`);
+    const archivePath = NormalizePath(`./${tempDir}/${browser}/${archiveName}`);
+    const globPattern = NormalizePath(`./${buildDir}/${browser}/*`);
     Bun.spawnSync(['7z', 'a', '-tzip', './' + archivePath, './' + globPattern]); // the ./ is needed here. something to do with how 7z determins pathing
-    await CopyFile({ from: archivePath, to: normalizePath(`./${bundleDir}/${browser}/${archiveName}`) });
+    await CopyFile({ from: archivePath, to: NormalizePath(`./${bundleDir}/${browser}/${archiveName}`) });
     // Cleanup
-    await Bun.write(normalizePath(`./${buildDir}/${browser}/manifest.json`), buildManifest.toJSON());
+    await Bun.write(NormalizePath(`./${buildDir}/${browser}/manifest.json`), buildManifest.toJSON());
   }, browser);
 }
 await new Promise<void>((resolve) => {
@@ -62,7 +61,7 @@ await new Promise<void>((resolve) => {
 });
 
 // Cleanup
-await DeleteDirectory(normalizePath(tempDir));
+await DeleteDirectory(NormalizePath(tempDir));
 
 function SanitizeFilePath(path: string) {
   return path.replace(/[^a-z0-9\.\_\-]/gi, '_').toLowerCase();

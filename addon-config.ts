@@ -11,7 +11,7 @@ export const buildConfig: AddonBuildConfig = {
     ],
   },
   copy: {
-    '/': [
+    './': [
       'LICENSE', //
       'icons/*.png',
       'icons/*.svg',

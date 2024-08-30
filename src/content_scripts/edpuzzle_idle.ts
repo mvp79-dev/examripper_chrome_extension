@@ -1,5 +1,5 @@
 import { Sleep } from '../lib/external/Algorithm/Sleep.js';
-import { Once, Optional } from '../lib/external/Design Pattern/Observer/Store.js';
+import { Const, Optional } from '../lib/external/Design Pattern/Observer/Store.js';
 import { type WebRequest, RebuildAndSendRequest } from '../lib/external/Platform/Browser/Extension/WebRequest.js';
 import { ChildListObserver } from '../lib/external/Platform/Web/DOM/MutationObserver/ChildList.js';
 import { ElementAddedObserver } from '../lib/external/Platform/Web/DOM/MutationObserver/ElementAdded.js';
@@ -65,10 +65,10 @@ class QuestionSection {
 
 let timelineUnlocked = false;
 
-const assignment_data = new Once<AssignmentData>();
-const edpuzzle_version = new Once<string>();
-const page_webrequest = new Once<WebRequest>();
-const questions_array = new Once<Question[]>();
+const assignment_data = new Const<AssignmentData>();
+const edpuzzle_version = new Const<string>();
+const page_webrequest = new Const<WebRequest>();
+const questions_array = new Const<Question[]>();
 
 const click_to_answer = new Optional<boolean>();
 const questionObserver_unsubscribe = new Optional<() => void>();

@@ -1,8 +1,6 @@
-import { normalize as normalizePath } from 'node:path';
-
 import { buildConfig } from '../../addon-config.js';
 import { DeleteDirectory } from '../../src/lib/external/Platform/Node/Fs.js';
-import { ParsePath } from '../../src/lib/external/Platform/Node/Path.js';
+import { NormalizePath, ParsePath } from '../../src/lib/external/Platform/Node/Path.js';
 import { getBaseToPathsMap } from './AddonConfig.js';
 
 function addReplaceExtension(path: string, matchExtList: string[], newExt: string) {
@@ -39,14 +37,14 @@ export async function compile(tempDir: string = './temp', scriptExtensions = ['.
   // Compile
   for (const [base, pathSet] of toBundle) {
     if (base !== '' && pathSet.size > 0) {
-      const tempBase = normalizePath(`./${tempDir}/${base}`);
+      const tempBase = NormalizePath(`./${tempDir}/${base}`);
       const tempPathSet = new Set<string>();
       for (const path of pathSet) {
         const tempPath = addReplaceExtension(path, scriptExtensions, '.js');
         if (tempPath) {
           tempPathSet.add(tempPath);
-          const { outputs, success } = await Bun.build({
-            entrypoints: [normalizePath(`./${base}/${path}`)],
+          const { outputs, success, logs } = await Bun.build({
+            entrypoints: [NormalizePath(`./${base}/${path}`)],
             minify: false,
             sourcemap,
             splitting: false,
@@ -54,7 +52,14 @@ export async function compile(tempDir: string = './temp', scriptExtensions = ['.
             define: { 'Bun.env.DEBUG': JSON.stringify(debug ? 'true' : 'false') },
           });
           if (success) {
-            await Bun.write(normalizePath(`./${tempBase}/${tempPath}`), `(function () {\n${await outputs[0].text()}})();`);
+            await Bun.write(NormalizePath(`./${tempBase}/${tempPath}`), `(function () {\n${await outputs[0].text()}})();`);
+          } else {
+            console.log();
+            console.error(`Compiler error in "${NormalizePath(`./${base}/${path}`)}"`);
+            console.log('Details below.\n');
+            for (const message of logs) {
+              console.error(message);
+            }
           }
         }
       }

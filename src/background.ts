@@ -58,6 +58,23 @@ chrome.runtime.onMessage.addListener((message: Message, sender) => {
   else if (message.action === "updateProgress") {
     chrome.runtime.sendMessage({ action: "progressUpdate", progress: message.progress });
   }
+
+  else if (message.action === "stopTyping") {
+    console.log('Stopping typing on tabId:', tabId_global);
+    // Send a message to the content script to stop typing
+    chrome.tabs.sendMessage(tabId_global, {action: "stopTyping"});
+  }
+
+  else if (message.action === "pauseTyping") {
+    console.log('Pausing typing on tabId:', tabId_global);
+    chrome.tabs.sendMessage(tabId_global, {action: "pauseTyping"});
+  }
+
+  else if (message.action === "resumeTyping") {
+    console.log('Resuming typing on tabId:', tabId_global);
+    chrome.tabs.sendMessage(tabId_global, {action: "resumeTyping"});
+  }
+
 });
 
 //                                                                            //
@@ -159,7 +176,19 @@ function injectScript(
   breakInterval: number,
 ) {
   console.log("Injecting script with text:", text);
-  async function simulateTyping(inputElement: any, char: string, delay: number) {
+  let isTyping = true;
+  let isPaused = false;
+
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.action === "stopTyping") {
+      isTyping = false;
+    } else if (message.action === "pauseTyping") {
+      isPaused = true;
+    } else if (message.action === "resumeTyping") {
+      isPaused = false;
+    }
+  });
+  async function simulateTyping(inputElement: any, char: any, delay: any) {
     console.log("Typing:", char);
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -188,13 +217,21 @@ function injectScript(
     });
   }
 
-  async function typeStringWithRandomDelay(inputElement: any, string: string) {
+  async function typeStringWithRandomDelay(inputElement: any, string: any) {
     const lowerBoundValue = 10000 / typingSpeed;
     const upperBoundValue = lowerBoundValue * 0.8;
     let wordCount = 0;
     let mistakeCount = 0;
     console.log("Typing string:", string);
     for (let i = 0; i < string.length; i++) {
+      if (!isTyping) {
+        console.log("Typing stopped");
+        break;
+      }
+      while (isPaused) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // Check every 100ms
+      }
+
       const char = string[i];
       const randomDelay =
         Math.floor(Math.random() * (upperBoundValue - lowerBoundValue + 1)) +
@@ -220,9 +257,9 @@ function injectScript(
         chrome.runtime.sendMessage({ action: "updateProgress", progress });
       }
     }
-    // if (isTyping) {
-    //   chrome.runtime.sendMessage({ action: "typingComplete" });
-    // }
+    if (!isTyping) {
+      chrome.runtime.sendMessage({ action: "typingComplete" });
+    }
   }
 
   const iframe = document.querySelector(".docs-texteventtarget-iframe");

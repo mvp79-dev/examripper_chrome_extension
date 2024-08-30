@@ -9,6 +9,9 @@ export enum MessageAction {
   Edpuzzle_SubmitAllAnswers = 'Edpuzzle_SubmitAllAnswers',
   DocsAutoTyper_StartTyping = 'startTyping',
   DocsProgressTracker = 'updateProgress',
+  DocsStopTyping = 'stopTyping',
+  DocsPauseTyping = 'pauseTyping',
+  DocsResumeTyping = 'resumeTyping',
 }
 
 export type Message =
@@ -20,6 +23,9 @@ export type Message =
   | { action: MessageAction.Edpuzzle_SubmitAllAnswers }
   | { action: MessageAction.DocsAutoTyper_StartTyping; data: { text: string; typingSpeed: number; mistakeRate: number; correctionSpeed: number; breakTime: number; breakInterval: number } }
   | { action: MessageAction.DocsProgressTracker; progress: number }
+  | { action: MessageAction.DocsStopTyping }
+  | { action: MessageAction.DocsPauseTyping }
+  | { action: MessageAction.DocsResumeTyping }
 export function Message<T extends Message['action']>(
   action: T,
   data: T extends MessageAction.Edpuzzle_WebRequest //

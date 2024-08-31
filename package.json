@@ -8,9 +8,16 @@
     "format": "prettier . --write"
   },
   "devDependencies": {
-    "@types/bun": "^1.1.8",
+    "@types/bun": "^1.1.6",
     "@types/chrome": "^0.0.268",
-    "@types/node": "^20.16.2",
+    "@types/node": "^20.16.1",
+    "@types/react": "^18.3.4",
+    "@types/react-dom": "^18.3.0",
     "prettier": "^3.3.3"
+  },
+  "dependencies": {
+    "mammoth": "^1.8.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }

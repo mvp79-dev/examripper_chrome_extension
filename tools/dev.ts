@@ -17,6 +17,8 @@ const runBuild = Debounce(async () => {
   await Run('bun run build');
 }, 250);
 
+runBuild();
+
 try {
   const watcher = new Watcher('./', 250);
   watcher.observe((events) => {

@@ -13,6 +13,8 @@ interface AssignmentData {
     date: string;
     views: number;
   }[];
+  // extras added in
+  privacy?: 'public' | 'private';
 }
 
 interface Question {
@@ -161,19 +163,29 @@ async function getAssignmentData(webRequest: WebRequest, retryCount = 0): Promis
 }
 
 async function getQuestions(mediaId?: string): Promise<void> {
-  if (!mediaId) {
+  // if (!mediaId) // need to get privacy information anyways
+  {
     const assignmentId = new URL(window.location.href).pathname.split('/').at(-2);
     const assignments_response = await fetch(`https://edpuzzle.com/api/v3/assignments/${assignmentId}`);
     const assignments_data = await assignments_response.json();
-    const { teacherAssignments } = assignments_data ?? {};
+    const { teacherAssignments, medias } = assignments_data ?? {};
     if (!Array.isArray(teacherAssignments)) {
       throw 'Missing { teacherAssignments }';
+    }
+    if (Array.isArray(medias)) {
+      (await assignment_data.get()).privacy = medias[0].privacy;
+    } else {
+      console.error('warning: could not determine if assignment is public or private. defaulting to private');
+      (await assignment_data.get()).privacy = 'private';
     }
     const { contentId } = teacherAssignments[0];
     if (!contentId) {
       throw 'Missing { contentId }';
     }
-    mediaId = contentId;
+    if (mediaId !== contentId) {
+      console.error('warning: mediaId not equal to contentId. not sure what this could mean');
+      mediaId = contentId;
+    }
   }
   if (!mediaId) {
     throw 'Missing { mediaId }';

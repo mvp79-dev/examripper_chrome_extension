@@ -25,7 +25,8 @@ export type Message =
   | { action: MessageAction.DocsProgressTracker; progress: number }
   | { action: MessageAction.DocsStopTyping }
   | { action: MessageAction.DocsPauseTyping }
-  | { action: MessageAction.DocsResumeTyping }
+  | { action: MessageAction.DocsResumeTyping };
+
 export function Message<T extends Message['action']>(
   action: T,
   data: T extends MessageAction.Edpuzzle_WebRequest //
@@ -33,10 +34,10 @@ export function Message<T extends Message['action']>(
     : T extends MessageAction.Edpuzzle_ClickToAnswer
       ? { enabled: boolean }
       : T extends MessageAction.DocsAutoTyper_StartTyping
-      ? { text: string; typingSpeed: number; mistakeRate: number; correctionSpeed: number; breakTime: number; breakInterval: number }
-    : T extends MessageAction.DocsProgressTracker
-      ? { progress: number }
-      : {},
+        ? { text: string; typingSpeed: number; mistakeRate: number; correctionSpeed: number; breakTime: number; breakInterval: number }
+        : T extends MessageAction.DocsProgressTracker
+          ? { progress: number }
+          : {},
 ): Extract<Message, { action: T }> {
   return { action, data } as Extract<Message, { action: T }>;
 }

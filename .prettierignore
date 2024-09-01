@@ -12,3 +12,5 @@ yarn.lock
 
 html2canvas.min.js
 src-archive
+src/lib/external
+src/popup/docsAutoType.js

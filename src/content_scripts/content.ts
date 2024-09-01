@@ -3,11 +3,11 @@ import { getBaseURL } from '../lib/macros.js' with { type: 'macro' };
 const BASE_URL = getBaseURL();
 
 const API_URLS = {
-  checkbox: BASE_URL + '/api/image/checkbox',
-  dragAndDrop: BASE_URL + '/api/match-terms',
-  freeResponse: BASE_URL + '/api/image/freeResponse',
+  checkbox: BASE_URL + '/api/ask/checkbox',
+  dragAndDrop: BASE_URL + '/api/ask/match-terms',
+  freeResponse: BASE_URL + '/api/ask/freeResponse',
   multipleChoice: BASE_URL + '/api/ask',
-  validate: BASE_URL + '/api/validate',
+  validate: BASE_URL + '/api/ask/validate',
 };
 
 const NOTABLE_FUNCTIONS = () => {

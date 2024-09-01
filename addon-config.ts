@@ -8,6 +8,8 @@ export const buildConfig: AddonBuildConfig = {
       'popup/**/*',
       'web_accessible_resources/**/*',
       'background.ts',
+      'components/*',
+      'index.tsx'
     ],
   },
   copy: {
@@ -15,6 +17,7 @@ export const buildConfig: AddonBuildConfig = {
       'LICENSE', //
       'icons/*.png',
       'icons/*.svg',
+      'public/*',
     ],
     src: ['**/*'],
   },

@@ -16,7 +16,7 @@ const [, , ...args] = Bun.argv;
 const buildDir = './build';
 const bundleDir = './release';
 const tempDir = './temp';
-const scriptExtensions = ['.ts'];
+const scriptExtensions = ['.ts', '.tsx'];
 
 // Compile
 const toCopy = await compile(tempDir, scriptExtensions, 'none', false);

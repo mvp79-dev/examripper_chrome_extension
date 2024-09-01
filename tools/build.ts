@@ -7,7 +7,7 @@ import { compile } from './lib/compile.js';
 // User Values
 const buildDir = './build';
 const tempDir = './temp';
-const scriptExtensions = ['.ts'];
+const scriptExtensions = ['.ts', '.tsx'];
 
 // Compile
 const toCopy = await compile(tempDir, scriptExtensions);

@@ -129,6 +129,7 @@ chrome.tabs.onActivated.addListener(function (activeInfo) {
   chrome.tabs.get(activeInfo.tabId, function (tab) {
     updatePopupPage(tab.id, tab.url);
   });
+  tabId_global = activeInfo.tabId;
 });
 
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {

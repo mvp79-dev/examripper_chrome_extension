@@ -40,7 +40,7 @@
   "web_accessible_resources": [
     {
       "matches": ["*://*.edpuzzle.com/*"],
-      "resources": ["web_accessible_resources/edpuzzle_inject.js"]
+      "resources": ["web_accessible_resources/edpuzzle_inject_version.js", "web_accessible_resources/edpuzzle_inject_video_speed.js"]
     },
     {
       "matches": ["*://docs.google.com/*"],

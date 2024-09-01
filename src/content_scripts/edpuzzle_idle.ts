@@ -129,6 +129,7 @@ window.addEventListener('pageshow', (event) => {
     console.log('%cThis page was loaded normally.', 'color:red');
 
     getVersion();
+    injectVideoSpeedFeature();
     chrome.runtime.onMessage.addListener(onMessageHandler);
     chrome.runtime.sendMessage(Message(MessageAction.Edpuzzle_GetWebRequest, {}));
     chrome.runtime.sendMessage(Message(MessageAction.Edpuzzle_GetClickToAnswer, {}));
@@ -140,7 +141,7 @@ window.addEventListener('pageshow', (event) => {
 function getVersion(): void {
   const script = document.createElement('script');
   script.async = false;
-  script.src = chrome.runtime.getURL('web_accessible_resources/edpuzzle_inject.js');
+  script.src = chrome.runtime.getURL('web_accessible_resources/edpuzzle_inject_version.js');
   script.type = 'text/javascript';
   document.head.append(script);
   const observer = new ElementAddedObserver({
@@ -152,6 +153,15 @@ function getVersion(): void {
       edpuzzle_version.set(input.value);
     }
   });
+}
+
+// video speed feature
+function injectVideoSpeedFeature(): void {
+  const script = document.createElement('script');
+  script.async = false;
+  script.src = chrome.runtime.getURL('web_accessible_resources/edpuzzle_inject_video_speed.js');
+  script.type = 'text/javascript';
+  document.head.append(script);
 }
 
 async function getAssignmentData(webRequest: WebRequest, retryCount = 0): Promise<void> {
@@ -268,6 +278,8 @@ async function unlockTimeline(data: AssignmentAttemptData, version: string): Pro
   }
 }
 
+// Answering Questions
+
 async function setupQuestionObserver() {
   if ((await questionObserver_unsubscribe.get()) === undefined) {
     questionObserver_unsubscribe.set(
@@ -371,6 +383,7 @@ async function markCorrectAnswers(questionSection: QuestionSection) {
     //  console.log(questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text);
     if (questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text) {
       // console.log({ question_text: questionSection.text });
+      // TODO: after confirming the question and answers, send to AI server
       const treeWalker = document.createTreeWalker(questionSection.answerSection, NodeFilter.SHOW_ELEMENT);
       while (treeWalker.nextNode()) {
         if (treeWalker.currentNode instanceof HTMLParagraphElement) {

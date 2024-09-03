@@ -7,10 +7,23 @@ chrome.runtime.onInstalled.addListener(function (details) {
     chrome.tabs.create({ url: 'https://examripper-288287396080.herokuapp.com/auth/start-auth' });
   }
 });
+
+function injectOverlayIcon(tabId: number) {
+  chrome.scripting.insertCSS({
+    target: { tabId: tabId },
+    files: ['overlay/overlay.css']
+  });
+
+  chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    files: ['overlay/overlay.js']
+  });
+}
+
 let tabId_global : any = null;
 let breakIntervalId: number | NodeJS.Timeout | ReturnType<typeof setTimeout> | null = null;
 let breakTimeoutId:NodeJS.Timeout | ReturnType<typeof setTimeout> |  number | null = null;
-chrome.runtime.onMessage.addListener((message: Message, sender) => {
+chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
   if (sender.tab?.id) {
     const tab_id = sender.tab.id;
     switch (message.action) {
@@ -95,6 +108,19 @@ chrome.runtime.onMessage.addListener((message: Message, sender) => {
     chrome.runtime.sendMessage({ action: "breakSkipped" });
   }
 
+  if (message.action === "getOverlayContent") {
+    fetch(chrome.runtime.getURL('src/popup/docsAutoTyper.html'))
+      .then(response => response.text())
+      .then(html => {
+        sendResponse({content: html});
+      })
+      .catch(error => {
+        console.error('Error loading overlay content:', error);
+        sendResponse({content: '<p>Error loading content</p>'});
+      });
+    return true; // Indicates that the response is sent asynchronously
+  }
+
 
 });
 
@@ -163,6 +189,7 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   }
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith("https://docs.google.com/document/")) {
     tabId_global = tabId;
+    injectOverlayIcon(tabId);
   }
 });
 

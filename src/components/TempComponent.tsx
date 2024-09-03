@@ -77,11 +77,50 @@ function DocsAutoTyper() {
   }, []);
 
   useEffect(() => {
+    chrome.storage.local.get(['autoTyperState'], (result) => {
+      if (result.autoTyperState) {
+        const state = JSON.parse(result.autoTyperState);
+        setFileContent(state.fileContent || '');
+        setTypingSpeed(state.typingSpeed || 30);
+        setMistakeRate(state.mistakeRate || 10);
+        setCorrectionSpeed(state.correctionSpeed || 30);
+        setBreakTime(state.breakTime || 10);
+        setBreakInterval(state.breakInterval || 100);
+        setEta(state.eta || '');
+        setFileName(state.fileName || '');
+        setIsTyping(state.isTyping || false);
+        setIsPaused(state.isPaused || false);
+        setProgress(state.progress || 0);
+        // ... set other relevant state variables
+      }
+    });
     document.addEventListener('paste', handlePaste);
     return () => {
       document.removeEventListener('paste', handlePaste);
     };
   }, []);
+
+  useEffect(() => {
+    persistState();
+  }, [fileContent, typingSpeed, mistakeRate, correctionSpeed, breakTime, breakInterval, eta, fileName, isTyping, isPaused, progress]);
+
+  const persistState = () => {
+    const stateToSave = {
+      fileContent,
+      typingSpeed,
+      mistakeRate,
+      correctionSpeed,
+      breakTime,
+      breakInterval,
+      eta,
+      fileName,
+      isTyping,
+      isPaused,
+      progress,
+      // ... other relevant state variables
+    };
+    chrome.storage.local.set({ autoTyperState: JSON.stringify(stateToSave) });
+  };
 
   const handlePaste = async (e: any) => {
     e.preventDefault();
@@ -124,6 +163,8 @@ function DocsAutoTyper() {
         try {
           const result = await mammoth.extractRawText({ arrayBuffer });
           setFileContent(result.value);
+          setFileName(file.name);
+          persistState();
         } catch (err) {
           console.error('Error extracting text:', err);
         }
@@ -134,6 +175,8 @@ function DocsAutoTyper() {
       const reader = new FileReader();
       reader.onload = (e) => {
         setFileContent(e.target.result);
+        setFileName(file.name);
+        persistState();
       };
       reader.readAsText(file);
     }
@@ -187,6 +230,7 @@ function DocsAutoTyper() {
     if (contentToType) {
       calculateETA(contentToType.length, typingSpeed, mistakeRate, correctionSpeed, breakInterval, breakTime);
 
+
       try {
         // Send initial request to backend to get words to replace
         const response = await fetch(`${BACKEND_URL}/api/autotyper/session`, {
@@ -227,6 +271,7 @@ function DocsAutoTyper() {
           setIsSolving(true);
           setIsTyping(true);
           setProgress(0);
+          persistState();
         } else {
           alert('Failed to get words to replace');
         }
@@ -246,6 +291,7 @@ function DocsAutoTyper() {
     setProgress(0);
     setIsOnBreak(false);
     setBreakCountdown(0);
+    persistState();
   };
 
   const handleSkipBreak = () => {
@@ -277,11 +323,13 @@ function DocsAutoTyper() {
   const handlePauseTyping = () => {
     chrome.runtime.sendMessage({ action: 'pauseTyping' });
     setIsPaused(true);
+    persistState();
   };
 
   const handleResumeTyping = () => {
     chrome.runtime.sendMessage({ action: 'resumeTyping' });
     setIsPaused(false);
+    persistState();
   };
 
   return (
@@ -290,7 +338,7 @@ function DocsAutoTyper() {
         <div className="center-content">
           <img
             className="logo"
-            src="../../icons/icon48.png"
+            src="../icons/icon128.png"
             style={{
               animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             }}

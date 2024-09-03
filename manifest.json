@@ -35,6 +35,11 @@
       "matches": ["<all_urls>"],
       "js": ["content_scripts/login.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": ["https://docs.google.com/document/*"],
+      "css": ["overlay/overlay.css"],
+      "js": ["overlay/overlay.js"]
     }
   ],
   "web_accessible_resources": [
@@ -44,7 +49,11 @@
     },
     {
       "matches": ["*://docs.google.com/*"],
-      "resources": ["popup/docsAutoType.html"]
+      "resources": ["popup/docsAutoTyper.html","src/index.js", "src/popup/docsAutoType.css"]
+    },
+    {
+      "matches": ["<all_urls>"],
+      "resources": ["overlay/helloWorld.js", "popup/docsAutoType.css", "components/docsAutoTyper.js", "components/TempComponent.tsx"]
     }
    
   ],

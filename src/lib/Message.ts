@@ -14,6 +14,7 @@ export enum MessageAction {
   DocsResumeTyping = 'resumeTyping',
   DocsSkipBreak = 'skipBreak',
   DocsStopBreak = 'stopBreak',
+  GetOverlayContent = 'getOverlayContent',
 }
 
 export type Message =
@@ -30,6 +31,7 @@ export type Message =
   | { action: MessageAction.DocsResumeTyping }
   | { action: MessageAction.DocsSkipBreak }
   | { action: MessageAction.DocsStopBreak }
+  | { action: MessageAction.GetOverlayContent }
 export function Message<T extends Message['action']>(
   action: T,
   data: T extends MessageAction.Edpuzzle_WebRequest //
@@ -43,6 +45,8 @@ export function Message<T extends Message['action']>(
       : T extends MessageAction.DocsSkipBreak
       ? {}
       : T extends MessageAction.DocsStopBreak
+      ? {}
+      : T extends MessageAction.GetOverlayContent
       ? {}
       : {},
 ): Extract<Message, { action: T }> {

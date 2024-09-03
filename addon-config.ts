@@ -9,7 +9,8 @@ export const buildConfig: AddonBuildConfig = {
       'web_accessible_resources/**/*',
       'background.ts',
       'components/*',
-      'index.tsx'
+      'index.tsx',
+      'overlay/**/*',
     ],
   },
   copy: {

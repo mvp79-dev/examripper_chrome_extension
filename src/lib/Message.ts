@@ -12,6 +12,8 @@ export enum MessageAction {
   DocsStopTyping = 'stopTyping',
   DocsPauseTyping = 'pauseTyping',
   DocsResumeTyping = 'resumeTyping',
+  DocsSkipBreak = 'skipBreak',
+  DocsStopBreak = 'stopBreak',
 }
 
 export type Message =
@@ -26,6 +28,8 @@ export type Message =
   | { action: MessageAction.DocsStopTyping }
   | { action: MessageAction.DocsPauseTyping }
   | { action: MessageAction.DocsResumeTyping }
+  | { action: MessageAction.DocsSkipBreak }
+  | { action: MessageAction.DocsStopBreak }
 export function Message<T extends Message['action']>(
   action: T,
   data: T extends MessageAction.Edpuzzle_WebRequest //
@@ -36,6 +40,10 @@ export function Message<T extends Message['action']>(
       ? { text: string; typingSpeed: number; mistakeRate: number; correctionSpeed: number; breakTime: number; breakInterval: number }
     : T extends MessageAction.DocsProgressTracker
       ? { progress: number }
+      : T extends MessageAction.DocsSkipBreak
+      ? {}
+      : T extends MessageAction.DocsStopBreak
+      ? {}
       : {},
 ): Extract<Message, { action: T }> {
   return { action, data } as Extract<Message, { action: T }>;

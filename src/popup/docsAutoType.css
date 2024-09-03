@@ -1,3 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 :root {
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
@@ -65,8 +68,8 @@
     width: 150px;
   }
   
-  .pause-button {
-    background-color: #66bd77;
+  .pause-resume-button {
+    background-color: #FFB86C;
     border: none;
     padding: 15px 20px;
     font-size: 18px;
@@ -112,4 +115,171 @@
     cursor: not-allowed;
   }
   
-  
+  /* General Styling */
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  background-color: #2b292e;
+  color: white;
+  border-radius: 5px;
+}
+
+.flex {
+  display: flex;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.h-screen {
+  height: auto;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.center-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+}
+
+.title {
+  color: #a99dfa;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.drag-drop-text {
+  color: #7d7898;
+  font-size: 0.75rem;
+  font-weight: semibold;
+}
+
+.pasting-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.pasting-text {
+  background-color: white;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.file-info {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: center;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.file-name {
+  color: #a99dfa;
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+.file-selected {
+  color: #555557;
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+.file-notice {
+  color: #555557;
+  font-size: 0.875rem;
+  font-weight: bold;
+}
+
+.form-group {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: center;
+}
+
+.label {
+  color: #a99dfa;
+  font-size: 0.7rem;
+  font-weight: bold;
+  width: 50%;
+}
+
+.input {
+  background-color: #3e3c40;
+  color: white;
+  font-size: 0.65rem;
+  text-align: center;
+  font-weight: semibold;
+  width: 50%;
+  padding: 5px;
+  border-radius: 5px;
+  border: none;
+}
+
+.buttons-group {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: center;
+}
+
+.start-button,
+.stop-button {
+  height: 50px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  background-color: #4CAF50;
+  color: white;
+}
+
+.stop-button {
+  background-color: #FF5722;
+}
+
+.start-button:disabled {
+  background-color: #3e3c40;
+  cursor: not-allowed;
+}
+
+.break-countdown {
+  color: #6c6c6c;
+  font-size: 0.75rem;
+  text-align: center;
+}

@@ -8,8 +8,8 @@ chrome.runtime.onInstalled.addListener(function (details) {
   }
 });
 let tabId_global : any = null;
-chrome.runtime.onConnect.addListener(function () {});
-
+let breakIntervalId: number | NodeJS.Timeout | ReturnType<typeof setTimeout> | null = null;
+let breakTimeoutId:NodeJS.Timeout | ReturnType<typeof setTimeout> |  number | null = null;
 chrome.runtime.onMessage.addListener((message: Message, sender) => {
   if (sender.tab?.id) {
     const tab_id = sender.tab.id;
@@ -59,10 +59,20 @@ chrome.runtime.onMessage.addListener((message: Message, sender) => {
     chrome.runtime.sendMessage({ action: "progressUpdate", progress: message.progress });
   }
 
-  else if (message.action === "stopTyping") {
+  if (message.action === "stopTyping") {
     console.log('Stopping typing on tabId:', tabId_global);
-    // Send a message to the content script to stop typing
-    chrome.tabs.sendMessage(tabId_global, {action: "stopTyping"});
+    chrome.tabs.sendMessage(tabId_global, {action: "stopTyping"}, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error sending stopTyping message:", chrome.runtime.lastError);
+      } else {
+        console.log("stopTyping message sent successfully", response);
+      }
+    });
+    if (breakIntervalId) {
+      clearInterval(breakIntervalId);
+      breakIntervalId = null;
+    }
+    chrome.runtime.sendMessage({ action: "stopBreak" });
   }
 
   else if (message.action === "pauseTyping") {
@@ -75,10 +85,24 @@ chrome.runtime.onMessage.addListener((message: Message, sender) => {
     chrome.tabs.sendMessage(tabId_global, {action: "resumeTyping"});
   }
 
+  else if (message.action === "skipBreak") {
+    console.log('Skipping break');
+    if (breakTimeoutId !== null) {
+      clearTimeout(breakTimeoutId);
+      breakTimeoutId = null;
+    }
+    chrome.tabs.sendMessage(tabId_global, {action: "skipBreak"});
+    chrome.runtime.sendMessage({ action: "breakSkipped" });
+  }
+
+
 });
+
 
 //                                                                            //
 // EXAM RIPPER
+
+
 
 console.log('background.js loaded');
 
@@ -179,16 +203,39 @@ function injectScript(
   console.log("Injecting script with text:", text);
   let isTyping = true;
   let isPaused = false;
+  let isOnBreak = false;
 
-  chrome.runtime.onMessage.addListener((message) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "stopTyping") {
       isTyping = false;
+      isPaused = false;
+      isOnBreak = false;
+      console.log("Typing stopped");
     } else if (message.action === "pauseTyping") {
       isPaused = true;
     } else if (message.action === "resumeTyping") {
       isPaused = false;
+    } else if (message.action === "startBreak") {
+      isOnBreak = true;
+    } else if (message.action === "breakEnded") {
+      isOnBreak = false;
+    } 
+    if (message.action === "skipBreak") {
+      console.log("Break skipped in content script");
+      resumeTyping();
     }
+    sendResponse({received: true});
+    return true; // Keeps the message channel open for sendResponse
   });
+
+  function pauseTyping() {
+    isPaused = true;
+  }
+
+  function resumeTyping() {
+    isPaused = false;
+  }
+
   async function simulateTyping(inputElement: any, char: any, delay: any) {
     console.log("Typing:", char);
     return new Promise((resolve) => {
@@ -230,6 +277,7 @@ function injectScript(
         break;
       }
       while (isPaused) {
+        if (!isTyping) break; // Check if typing should stop during pause
         await new Promise(resolve => setTimeout(resolve, 100)); // Check every 100ms
       }
 
@@ -240,7 +288,7 @@ function injectScript(
 
       if (wordCount >= breakInterval) {
         wordCount = 0;
-        await new Promise((resolve) => setTimeout(resolve, breakTime * 10000));
+        await startBreak(breakTime*60);
       }
 
 
@@ -255,6 +303,22 @@ function injectScript(
     if (!isTyping) {
       chrome.runtime.sendMessage({ action: "typingComplete" });
     }
+  }
+
+  async function startBreak(breakTime: number) {
+    chrome.runtime.sendMessage({ action: "startBreak", breakTime });
+    pauseTyping();
+    breakTimeoutId = setTimeout(() => {
+      chrome.runtime.sendMessage({ action: "breakEnded" });
+      resumeTyping();
+      breakTimeoutId = null;
+    }, breakTime * 1000);
+    for (let i = 0; i < breakTime; i++) {
+      if (!isPaused) break;
+      chrome.runtime.sendMessage({ action: "updateBreak", timeLeft: breakTime - i });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    chrome.runtime.sendMessage({ action: "breakEnded" });
   }
 
   const iframe = document.querySelector(".docs-texteventtarget-iframe");

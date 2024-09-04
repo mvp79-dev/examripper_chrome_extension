@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import mammoth from 'mammoth';
-
+import { styles } from './styles';
 function DocsAutoTyper() {
   const [fileContent, setFileContent] = useState('');
   const [googleDriveFile, setGoogleDriveFile] = useState(null);
@@ -50,12 +50,25 @@ function DocsAutoTyper() {
       chrome.runtime.onMessage.removeListener(handleProgressUpdate);
     };
   }, []);
+
+  // UseEffect for loading the styles
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = styles;
+    document.head.appendChild(styleElement);
+
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
+
   useEffect(() => {
     const handleBreakMessage = (message: any) => {
       if (message.action === 'startBreak') {
         setIsOnBreak(true);
         setBreakCountdown(message.breakTime);
       } else if (message.action === 'updateBreak') {
+        console.log('updateBreak', message.timeLeft);
         setBreakCountdown(message.timeLeft);
         if (message.timeLeft === 0) {
           setIsOnBreak(false);
@@ -296,6 +309,8 @@ function DocsAutoTyper() {
 
   const handleSkipBreak = () => {
     chrome.runtime.sendMessage({ action: 'skipBreak' });
+    setIsOnBreak(false); // Immediately hide the break countdown
+    setBreakCountdown(0);
   };
 
   const handleDragOver = (e: any) => {
@@ -334,17 +349,10 @@ function DocsAutoTyper() {
 
   return (
     <div className="flex justify-center items-center h-screen bg-[#FFB86C]">
-      <div className="App">
-        <div className="center-content">
-          <img
-            className="logo"
-            src="../icons/icon128.png"
-            style={{
-              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            }}
-          />
-        </div>
+      <div className="App" id="App">
+        <img className="logo" src="../icons/icon128.png" alt="Logo" />
         <h1 className="title">Google Docs Auto Typer</h1>
+        <p className="status-message">To prevent teachers viewing your revision history and seeing you copy pasting, simply drag and drop a document file or text file, select through some options such as typing speed, and click start, Examripper will automatically type out an essay with breaks and mistakes like any other human!</p>
         <div>
           <input id="fileInput" type="file" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e.target.files[0])} accept=".txt,.docx" />
           <div
@@ -380,29 +388,27 @@ function DocsAutoTyper() {
             <label className="file-notice">Please upload a file</label>
           )}
         </div>
-        <div className="form-group">
-          <label className="label">Typing Speed (WPM): </label>
-          <select value={typingSpeed} className="input" onChange={(e) => setTypingSpeed(parseInt(e.target.value, 10))}>
-            {[...Array(31)].map((_, i) => (
-              <option key={i + 30} value={i + 30}>
-                {i + 30} WPM
-              </option>
-            ))}
-          </select>
+        <div className="slider-container">
+          <label htmlFor="typing-speed-slider">
+            Typing Speed: <span className="current-value">{typingSpeed} WPM</span>
+            <span className="tooltip">
+              <i className="fas fa-question-circle"></i>
+            </span>
+          </label>
+          <input type="range" id="typing-speed-slider" min="30" max="60" value={typingSpeed} onChange={(e) => setTypingSpeed(parseInt(e.target.value, 10))} />
+        </div>
+        <div className="slider-container">
+          <label htmlFor="typing-speed-slider">
+            Correction Speed <span className="current-value">{correctionSpeed} WPM</span>
+            <span className="tooltip">
+              <i className="fas fa-question-circle"></i>
+            </span>
+          </label>
+          <input type="range" id="typing-speed-slider" min="30" max="60" value={correctionSpeed} onChange={(e) => setCorrectionSpeed(parseInt(e.target.value, 10))} />
         </div>
         <div className="form-group">
           <label className="label">Mistake Rate (Words): </label>
           <input type="number" value={mistakeRate} className="input" onChange={(e) => setMistakeRate(parseInt(e.target.value, 10))} />
-        </div>
-        <div className="form-group">
-          <label className="label">Correction Speed (WPM): </label>
-          <select value={correctionSpeed} className="input" onChange={(e) => setCorrectionSpeed(parseInt(e.target.value, 10))}>
-            {[...Array(31)].map((_, i) => (
-              <option key={i + 30} value={i + 30}>
-                {i + 30} WPM
-              </option>
-            ))}
-          </select>
         </div>
         <div className="form-group">
           <label className="label">Break Time (Minutes): </label>
@@ -414,6 +420,10 @@ function DocsAutoTyper() {
         </div>
         <div className="form-group">
           <label className="label">ETA (Estimated Time of Arrival): {eta}</label>
+        </div>
+
+        <div id="error-message" className="error-message" style={{ display: 'none' }}>
+          <span id="error-text"></span>
         </div>
 
         {isOnBreak && (
@@ -444,85 +454,109 @@ function DocsAutoTyper() {
 
         <div className="buttons-group">
           <div>
-            <button
-              id="start-button"
-              className="start-button"
-              onClick={handleStartTyping}
-              disabled={isTyping && replacementProgress < 100}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <span>{replacementProgress > 0 && replacementProgress < 100 ? `Replacing ${Math.ceil((replacementProgress / 100) * wordsToReplace.length)}/${wordsToReplace.length} words` : 'Start'}</span>
-              {replacementProgress > 0 && replacementProgress < 100 && (
-                <div
-                  id="progress-bar"
+            {!isTyping && replacementProgress < 100 ? (
+              <div>
+                <button
+                  id="start-button"
+                  className="start-button"
+                  onClick={handleStartTyping}
+                  disabled={isTyping && replacementProgress < 100}
                   style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    width: `${replacementProgress}%`,
-                    height: '4px',
-                    backgroundColor: '#F8F8F2',
-                    transition: 'width 0.3s ease-in-out',
-                  }}
-                ></div>
-              )}
-            </button>
-          </div>
-          <div>
-            <button
-              id="pause-resume-button"
-              className={isTyping ? 'solving-button' : 'start-button'}
-              onClick={isPaused ? handleResumeTyping : handlePauseTyping}
-              disabled={!isTyping}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#FFB86C',
-                border: 'none',
-                padding: '15px 20px',
-                fontSize: '18px',
-                cursor: 'pointer',
-                borderRadius: '8px',
-                color: '#F8F8F2',
-                margin: '20px auto',
-              }}
-            >
-              {isPaused ? 'Resume' : 'Pause'}
-              {!isPaused ? (
-                <div
-                  style={{
-                    width: '20px',
-                    height: '20px',
-                    marginLeft: '8px',
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    position: 'relative',
+                    overflow: 'hidden',
                   }}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 320 512"
-                    width="100%"
-                    height="100%"
-                    fill="currentColor" // This will use the current text color
+                  <span>{replacementProgress > 0 && replacementProgress < 100 ? `Replacing ${Math.ceil((replacementProgress / 100) * wordsToReplace.length)}/${wordsToReplace.length} words` : 'Start'}</span>
+                  {replacementProgress > 0 && replacementProgress < 100 && (
+                    <div
+                      id="progress-bar"
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        width: `${replacementProgress}%`,
+                        height: '4px',
+                        backgroundColor: '#F8F8F2',
+                        transition: 'width 0.3s ease-in-out',
+                      }}
+                    ></div>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div>
+                {isTyping && (
+                  <button
+                    id="stop-button"
+                    className="stop-button"
+                    onClick={handleStopTyping}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
-                    <path d="M48 64C21.5 64 0 85.5 0 112L0 400c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48L48 64zm192 0c-26.5 0-48 21.5-48 48l0 288c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48l-32 0z" />
-                  </svg>
-                </div>
-              ) : null}
-            </button>
+                    Stop
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div>
+            {isTyping && (
+              <button
+                id="pause-resume-button"
+                className={isTyping ? 'solving-button' : 'start-button'}
+                onClick={isPaused ? handleResumeTyping : handlePauseTyping}
+                disabled={!isTyping}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#FFB86C',
+                  border: 'none',
+                  padding: '15px 20px',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  color: '#F8F8F2',
+                  margin: '20px auto',
+                }}
+              >
+                {isPaused ? 'Resume' : 'Pause'}
+                {!isPaused ? (
+                  <div
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      marginLeft: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 320 512"
+                      width="100%"
+                      height="100%"
+                      fill="currentColor" // This will use the current text color
+                    >
+                      <path d="M48 64C21.5 64 0 85.5 0 112L0 400c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48L48 64zm192 0c-26.5 0-48 21.5-48 48l0 288c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48l-32 0z" />
+                    </svg>
+                  </div>
+                ) : null}
+              </button>
+            )}
           </div>
         </div>
 
-        <div>
+        {/* <div>
           {isTyping && (
             <button
               id="stop-button"
@@ -537,7 +571,7 @@ function DocsAutoTyper() {
               Stop
             </button>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );

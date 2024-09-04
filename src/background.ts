@@ -9,10 +9,6 @@ chrome.runtime.onInstalled.addListener(function (details) {
 });
 
 function injectOverlayIcon(tabId: number) {
-  chrome.scripting.insertCSS({
-    target: { tabId: tabId },
-    files: ['overlay/overlay.css']
-  });
 
   chrome.scripting.executeScript({
     target: { tabId: tabId },
@@ -98,6 +94,11 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     chrome.tabs.sendMessage(tabId_global, {action: "resumeTyping"});
   }
 
+  else if (message.action === "startBreak") {
+    console.log('Starting break on tabId:', tabId_global);
+    chrome.tabs.sendMessage(tabId_global, {action: "startBreak"});
+  }
+
   else if (message.action === "skipBreak") {
     console.log('Skipping break');
     if (breakTimeoutId !== null) {
@@ -108,17 +109,15 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     chrome.runtime.sendMessage({ action: "breakSkipped" });
   }
 
-  if (message.action === "getOverlayContent") {
-    fetch(chrome.runtime.getURL('src/popup/docsAutoTyper.html'))
-      .then(response => response.text())
-      .then(html => {
-        sendResponse({content: html});
-      })
-      .catch(error => {
-        console.error('Error loading overlay content:', error);
-        sendResponse({content: '<p>Error loading content</p>'});
+  if (message.action === "updateBreak" || message.action === "startBreak" || message.action === "breakEnded") {
+    // Relay the message to all tabs
+    chrome.tabs.query({}, function(tabs) {
+      tabs.forEach(tab => {
+        if (tab.id) {
+          chrome.tabs.sendMessage(tab.id, message);
+        }
       });
-    return true; // Indicates that the response is sent asynchronously
+    });
   }
 
 
@@ -141,10 +140,6 @@ function getPopupPage(tabUrl = '') {
   if (GlobSearch(tabUrl, '*://edpuzzle.com/*')) {
     console.log('edpuzzle');
     return '/popup/edpuzzle.html';
-  }
-
-  if (GlobSearch(tabUrl, '*://docs.google.com/document/*')) {
-    return '/popup/docsAutoTyper.html';
   }
 
   console.log('loggedInSub');
@@ -189,7 +184,19 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   }
   if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith("https://docs.google.com/document/")) {
     tabId_global = tabId;
-    injectOverlayIcon(tabId);
+    chrome.storage.local.remove('autoTyperState', () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error removing autoTyperState:', chrome.runtime.lastError);
+      } else {
+        console.log('autoTyperState removed from local storage');
+      }
+    });
+    chrome.storage.local.get(['authToken'], function(result) {
+      if (result.authToken) {
+        injectOverlayIcon(tabId);
+      }
+    });
+    // injectOverlayIcon(tabId);
   }
 });
 
@@ -335,11 +342,11 @@ function injectScript(
   async function startBreak(breakTime: number) {
     chrome.runtime.sendMessage({ action: "startBreak", breakTime });
     pauseTyping();
-    breakTimeoutId = setTimeout(() => {
-      chrome.runtime.sendMessage({ action: "breakEnded" });
-      resumeTyping();
-      breakTimeoutId = null;
-    }, breakTime * 1000);
+    // breakTimeoutId = setTimeout(() => {
+    //   chrome.runtime.sendMessage({ action: "breakEnded" });
+    //   resumeTyping();
+    //   breakTimeoutId = null;
+    // }, breakTime * 1000);
     for (let i = 0; i < breakTime; i++) {
       if (!isPaused) break;
       chrome.runtime.sendMessage({ action: "updateBreak", timeLeft: breakTime - i });

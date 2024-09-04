@@ -36,7 +36,8 @@ export const styles = `
     100% { transform: translate(0%, 0%); }
   }
   .logo {
-    height: 60px;
+    height: 40px;
+    width: 40px;
     margin: 10px auto;
     display: block;
     animation: pulse 2s infinite;

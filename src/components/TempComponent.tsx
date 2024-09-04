@@ -22,6 +22,7 @@ function DocsAutoTyper() {
   const [wordsToReplace, setWordsToReplace] = useState([]);
   const [replacementProgress, setReplacementProgress] = useState(0);
   const [isOnBreak, setIsOnBreak] = useState(false);
+  const [notification, setNotification] = useState(false);
   const [breakCountdown, setBreakCountdown] = useState(0);
   const BACKEND_URL = 'https://examripper-288287396080.herokuapp.com';
   useEffect(() => {
@@ -239,6 +240,7 @@ function DocsAutoTyper() {
   };
 
   const handleStartTyping = async () => {
+    setNotification(true);
     let contentToType = fileContent || googleDriveFile || '';
     if (contentToType) {
       calculateETA(contentToType.length, typingSpeed, mistakeRate, correctionSpeed, breakInterval, breakTime);
@@ -267,7 +269,7 @@ function DocsAutoTyper() {
           setWordsToReplace(data.result.wordsToReplace);
           const replacedContent = await replaceWords(contentToType, data.result.wordsToReplace);
           // console.log("Replaced content:", replacedContent);
-
+          setNotification(false);
           // Now that we have the replaced content, send the message to start typing
           chrome.runtime.sendMessage({
             action: 'startTyping',
@@ -350,7 +352,7 @@ function DocsAutoTyper() {
   return (
     <div className="flex justify-center items-center h-screen bg-[#FFB86C]">
       <div className="App" id="App">
-        <img className="logo" src="../icons/icon128.png" alt="Logo" />
+        <img className="logo" src={chrome.runtime.getURL("icons/icon128.png")} alt="Logo" />
         <h1 className="title">Google Docs Auto Typer</h1>
         <p className="status-message">To prevent teachers viewing your revision history and seeing you copy pasting, simply drag and drop a document file or text file, select through some options such as typing speed, and click start, Examripper will automatically type out an essay with breaks and mistakes like any other human!</p>
         <div>
@@ -425,6 +427,13 @@ function DocsAutoTyper() {
         <div id="error-message" className="error-message" style={{ display: 'none' }}>
           <span id="error-text"></span>
         </div>
+        {
+          notification && (
+            <div className="notification">
+              <p>Retrieving Session...  </p>
+            </div>
+          )
+        }
 
         {isOnBreak && (
           <div className="break-countdown">

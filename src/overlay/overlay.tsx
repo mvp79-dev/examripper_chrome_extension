@@ -53,7 +53,13 @@ logoImage.style.cssText = `
 `;
 
 toggleButton.appendChild(logoImage);
-document.body.appendChild(toggleButton);
+
+// check if the user is a donor
+chrome.storage.local.get(['donor_status'], function({ donor_status }) {
+  if (donor_status === true) {
+    document.body.appendChild(toggleButton);
+  }
+});
 
 
 // Function to load styles

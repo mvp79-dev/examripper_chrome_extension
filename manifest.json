@@ -53,6 +53,10 @@
     {
       "matches": ["<all_urls>"],
       "resources": ["overlay/helloWorld.js", "popup/docsAutoType.css", "components/docsAutoTyper.js", "components/TempComponent.tsx"]
+    },
+    {
+      "matches":["<all_urls>"],
+      "resources":["icons/icon16.png","icons/icon48.png","icons/icon128.png"]
     }
    
   ],

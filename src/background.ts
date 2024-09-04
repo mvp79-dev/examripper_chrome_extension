@@ -191,12 +191,6 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
         console.log('autoTyperState removed from local storage');
       }
     });
-    chrome.storage.local.get(['authToken'], function(result) {
-      if (result.authToken) {
-        injectOverlayIcon(tabId);
-      }
-    });
-    // injectOverlayIcon(tabId);
   }
 });
 

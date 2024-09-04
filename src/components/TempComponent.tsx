@@ -430,7 +430,13 @@ function DocsAutoTyper() {
         {
           notification && (
             <div className="notification">
-              <p>Retrieving Session...  </p>
+              <p
+              style={{
+                color: '#F8F8F2',
+                fontSize: '18px',
+                fontWeight: 'bold',
+              }}
+              >Retrieving Session...  </p>
             </div>
           )
         }

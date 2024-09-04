@@ -45,21 +45,25 @@ export async function compile(tempDir: string = './temp', scriptExtensions = ['.
         const tempPath = addReplaceExtension(path, scriptExtensions, '.js');
         if (tempPath) {
           tempPathSet.add(tempPath);
-          const { outputs, success } = await Bun.build({
+          const { outputs, success, logs } = await Bun.build({
             entrypoints: [normalizePath(`./${base}/${path}`)],
             minify: false,
             sourcemap,
             splitting: false,
             target: 'browser',
-            define: { 
+            define: {
               'Bun.env.DEBUG': JSON.stringify(debug ? 'true' : 'false'),
               'process.env': '{}',
               'process.platform': '"browser"',
-              'process.version': '"0.0.0"'
+              'process.version': '"0.0.0"',
             },
           });
           if (success) {
             await Bun.write(normalizePath(`./${tempBase}/${tempPath}`), `(function () {\n${await outputs[0].text()}})();`);
+          } else {
+            for (const log of logs) {
+              console.log(log);
+            }
           }
         }
       }

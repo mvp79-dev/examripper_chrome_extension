@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Docs Auto Typer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'dark-bg': '#282A36',
+                        'light-bg': '#2b292e',
+                        'accent': '#66bd77',
+                        'text': '#F8F8F2'
+                        
+                    },
+                    boxShadow: {
+                        'neumorph': '5px 5px 10px #1e1e24, -5px -5px 10px #38363e',
+                        'neumorph-inset': 'inset 5px 5px 10px #1e1e24, inset -5px -5px 10px #38363e',
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-[#F8F8F2] font-sans text-lg">
+        <div class="container mx-auto p-8">
+        <div class="bg-light-bg rounded-xl shadow-neumorph p-8 max-w-2xl mx-auto">
+            <img src="../../icons/icon128.png" alt="Logo" class="h-20 mx-auto mb-6 animate-pulse rounded-full shadow-neumorph">
+            <h1 class="text-3xl font-bold mb-4">Google Docs Auto Typer</h1>
+
+            <p class="text-gray-400 mb-8">To prevent teachers viewing your revision history and seeing you copy pasting, simply drag and drop a document file or text file, select through some options such as typing speed, and click start, Examripper will automatically type out an essay with breaks and mistakes like any other human!</p>
+            
+            <div class="space-y-8">
+                <div id="upload-file-box" class="bg-dark-bg rounded-lg shadow-neumorph p-6 transition-transform duration-300 hover:-translate-y-1">
+                    <h2 class="text-2xl font-semibold mb-4">Upload File</h2>
+                    <p class="text-gray-400 mb-6">Drag & Drop a .txt or .docx file here, or click to upload</p>
+                    <input id="fileInput" type="file" class="hidden" accept=".txt,.docx">
+                    <div id="drag-drop-area" class="drag-drop-area bg-light-bg p-4 rounded-lg cursor-pointer tooltip">
+                        <p class="drag-drop-text text-gray-400">Drag & Drop a .txt or .docx file here, or click to upload</p>
+                        <span class="tooltiptext">Click to upload file</span>
+                    </div>
+                    <button id="simulate-upload" class="bg-accent text-white px-6 py-3 rounded-lg shadow-neumorph transition-colors duration-300 hover:bg-green-600 mt-4 tooltip">
+                        <i class="fas fa-upload mr-2"></i>Simulate Upload
+                        <span class="tooltiptext">Simulate file upload</span>
+                    </button>
+                </div>
+                
+                <div id="typing-menu" class="hidden">
+                    <div class="flex items-center justify-center mt-8">
+                        <span class="px-4 text-gray-400">{{FILE NAME}} Loaded</span>
+                        <button id="change-file-button" class="bg-accent text-white px-4 py-2 rounded-lg shadow-neumorph transition-colors duration-300 hover:bg-green-600 ml-4 tooltip">
+                            <i class="fas fa-file-upload mr-2"></i>Change File
+                        </button>
+                    </div>
+                    
+                    <div class="bg-dark-bg rounded-lg shadow-neumorph p-6 transition-transform duration-300 hover:-translate-y-1 mt-8">
+                        <h2 class="text-2xl font-semibold mb-4">Settings</h2>
+                        
+                        <div class="slider-container mb-4 tooltip">
+                            <label for="typing-speed-slider" class="block text-gray-400 mb-2">
+                                <i class="fas fa-keyboard mr-2"></i>Typing Speed: <span class="current-value">0 WPM</span>
+                            </label>
+                            <input type="range" id="typing-speed-slider" min="30" max="60" value="0" class="w-full appearance-none bg-gray-700 rounded-lg h-2 focus:outline-none focus:ring-2 focus:ring-accent">
+                            <span class="tooltiptext">Adjust the typing speed</span>
+                        </div>
+                        
+                        <button id="advanced-settings-button" class="bg-accent text-white px-4 py-2 rounded-lg shadow-neumorph transition-colors duration-300 hover:bg-green-600 mb-4">
+                            <i class="fas fa-cog mr-2"></i>Advanced Settings
+                        </button>
+                        
+                        
+                        <div id="advanced-settings" class="hidden">
+                            <div class="slider-container mb-4 tooltip">
+                                <label for="correction-speed-slider" class="block text-gray-400 mb-2">
+                                    <i class="fas fa-undo-alt mr-2"></i>Correction Speed: <span class="current-value">0 WPM</span>
+                                </label>
+                                <input type="range" id="correction-speed-slider" min="30" max="60" value="0" class="w-full appearance-none bg-gray-700 rounded-lg h-2 focus:outline-none focus:ring-2 focus:ring-accent">
+                                <span class="tooltiptext">Adjust the correction speed</span>
+                            </div>
+                            
+                            <div class="form-group mb-4 tooltip">
+                                <label class="block text-gray-400 mb-2">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>Mistake Rate (Words):
+                                </label>
+                                <input type="number" value="0" class="input w-full p-2 rounded-lg bg-light-bg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent">
+                                <span class="tooltiptext">Set the rate of mistakes per words</span>
+                            </div>
+                            
+                            <div class="form-group mb-4 tooltip">
+                                <label class="block text-gray-400 mb-2">
+                                    <i class="fas fa-coffee mr-2"></i>Break Time (Minutes):
+                                </label>
+                                <input type="number" value="0" class="input w-full p-2 rounded-lg bg-light-bg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent">
+                                <span class="tooltiptext">Set the break time in minutes</span>
+                            </div>
+                            
+                            <div class="form-group mb-4 tooltip">
+                                <label class="block text-gray-400 mb-2">
+                                    <i class="fas fa-clock mr-2"></i>Break Interval (Words):
+                                </label>
+                                <input type="number" value="0" class="input w-full p-2 rounded-lg bg-light-bg text-gray-200 focus:outline-none focus:ring-2 focus:ring-accent">
+                                <span class="tooltiptext">Set the interval for breaks in words</span>
+                            </div>
+                            
+                            
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <label class="block text-gray-400 mb-2">
+                                <i class="fas fa-hourglass-half mr-2"></i>ETA (Estimated Time of Arrival): 0
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 text-[#F8F8F2]" >
+                <button id="start-button" class="bg-accent text-white px-6 py-3 rounded-lg shadow-neumorph transition-colors duration-300 hover:bg-green-600 w-full">
+                    <i class="fas fa-play mr-2"></i>Start
+                </button>
+                <button id="pause-button" class="bg-[#F1FA8C] text-white px-6 py-3 rounded-lg shadow-neumorph transition-colors duration-300 hover:bg-yellow-500 w-full mt-4 hidden">
+                    <i class="fas fa-pause mr-2"></i>Pause
+                </button>
+                <button id="stop-button" class="bg-[#FF5555] text-white px-6 py-3 rounded-lg shadow-neumorph transition-colors duration-300 hover:bg-red-700 w-full mt-4 hidden">
+                    <i class="fas fa-stop mr-2"></i>Stop
+                </button>
+                <button id="skip-break-button" class="bg-[#BD93F9] text-white px-6 py-3 rounded-lg shadow-neumorph transition-colors duration-300 hover:bg-purple-500 w-full mt-4 hidden">
+                    <i class="fas fa-forward mr-2"></i>Skip Break
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script> // DO NOT CHANGE THIS
+        document.getElementById('drag-drop-area').addEventListener('click', function() {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', function() {
+            document.getElementById('typing-menu').classList.remove('hidden');
+            document.getElementById('upload-file-box').classList.add('hidden');
+        });
+
+        document.getElementById('simulate-upload').addEventListener('click', function() {
+            document.getElementById('typing-menu').classList.remove('hidden');
+            document.getElementById('upload-file-box').classList.add('hidden');
+        });
+
+        document.getElementById('change-file-button').addEventListener('click', function() {
+            document.getElementById('typing-menu').classList.add('hidden');
+            document.getElementById('upload-file-box').classList.remove('hidden');
+        });
+        document.getElementById('advanced-settings-button').addEventListener('click', function() {
+            const advancedSettings = document.getElementById('advanced-settings');
+            advancedSettings.classList.toggle('hidden');
+        });
+    </script>
+    <script>
+        let isPaused = false;
+let currentInterval = null;
+
+function updateButtonState(state, currentStep = 0, totalSteps = 0, breakTime = 0) {
+    const startButton = document.getElementById('start-button');
+    startButton.style.color = "#F8F8F2"
+    const pauseButton = document.getElementById('pause-button');
+    const stopButton = document.getElementById('stop-button');
+    const skipBreakButton = document.getElementById('skip-break-button');
+
+    switch (state) {
+        case 'Starting Session':
+            startButton.style.backgroundColor = '#BD93F9';
+            startButton.innerHTML = '<i class="fas fa-play mr-2"></i>Starting Session';
+            stopButton.classList.remove('hidden');
+            pauseButton.classList.remove('hidden');
+            break;
+        case 'Retrieving Replacements':
+            startButton.style.backgroundColor = '#FFB86C';
+            startButton.innerHTML = `<i class="fas fa-sync-alt mr-2"></i>Retrieving Replacements (${currentStep}/${totalSteps})`;
+            break;
+        case 'Start Typing':
+            startButton.style.backgroundColor = '#FF79C6';
+            startButton.innerHTML = `<i class="fas fa-keyboard mr-2"></i>Typing out word (${currentStep}/${totalSteps})`;
+            break;
+        case 'Update Words':
+            startButton.innerHTML = `<i class="fas fa-keyboard mr-2"></i>Typing out word (${currentStep}/${totalSteps})`;
+            break;
+        case 'Taking Break':
+            const formattedTime = formatTime(breakTime);
+            startButton.style.backgroundColor = '#8BE9FD';
+            startButton.innerHTML = `<i class="fas fa-coffee mr-2 animate-pulse"></i>Taking Break (${formattedTime})`;
+            skipBreakButton.classList.remove('hidden');
+            break;
+        default:
+            startButton.style.backgroundColor = '#66bd77';
+            startButton.innerHTML = '<i class="fas fa-play mr-2"></i>Start';
+            stopButton.classList.add('hidden');
+            pauseButton.classList.add('hidden');
+            skipBreakButton.classList.add('hidden');
+            break;
+    }
+}
+
+document.getElementById('start-button').addEventListener('click', function() {
+    
+    const steps = [
+        { state: 'Starting Session' },
+        { state: 'Retrieving Replacements', currentStep: 1, totalSteps: 3 },
+        { state: 'Retrieving Replacements', currentStep: 2, totalSteps: 3 },
+        { state: 'Retrieving Replacements', currentStep: 3, totalSteps: 3 },
+        { state: 'Start Typing', currentStep: 1, totalSteps: 5 },
+        { state: 'Update Words', currentStep: 2, totalSteps: 5 },
+        { state: 'Update Words', currentStep: 3, totalSteps: 5 },
+        { state: 'Update Words', currentStep: 4, totalSteps: 5 },
+        { state: 'Update Words', currentStep: 5, totalSteps: 5 },
+        { state: 'Taking Break', breakTime: 120 },
+        { state: 'default' }
+    ];
+
+    steps.forEach((step, index) => {
+        setTimeout(() => {
+            if (!isPaused) {
+                updateButtonState(step.state, step.currentStep, step.totalSteps, step.breakTime);
+                if (step.state === 'Taking Break') {
+                    currentInterval = setInterval(() => {
+                        if (!isPaused) {
+                            step.breakTime--;
+                            updateButtonState(step.state, step.currentStep, step.totalSteps, step.breakTime);
+                            if (step.breakTime <= 0) {
+                                clearInterval(currentInterval);
+                                skipBreakButton.classList.add('hidden');
+                            }
+                        }
+                    }, 1000);
+                }
+            }
+        }, index * 500);
+    });
+});
+
+document.getElementById('pause-button').addEventListener('click', function() {
+    isPaused = !isPaused;
+    const pauseButton = document.getElementById('pause-button');
+    if (isPaused) {
+        pauseButton.innerHTML = '<i class="fas fa-play mr-2"></i>Resume';
+    } else {
+        pauseButton.innerHTML = '<i class="fas fa-pause mr-2"></i>Pause';
+    }
+});
+
+document.getElementById('stop-button').addEventListener('click', function() {
+    isPaused = false;
+    clearInterval(currentInterval);
+    updateButtonState('default');
+});
+
+document.getElementById('skip-break-button').addEventListener('click', function() {
+    clearInterval(currentInterval);
+    updateButtonState('default');
+});
+
+function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+}
+    </script>
+    <style>
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #66bd77;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #66bd77;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+    </style>
+</body>
+</html>

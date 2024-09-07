@@ -82,6 +82,32 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     chrome.tabs.sendMessage(tabId_global, { action: 'resumeTyping' });
   }
 
+  else if (message.action === "startBreak") {
+    console.log('Starting break on tabId:', tabId_global);
+    chrome.tabs.sendMessage(tabId_global, {action: "startBreak"});
+  }
+
+  else if (message.action === "skipBreak") {
+    console.log('Skipping break');
+    if (breakTimeoutId !== null) {
+      clearTimeout(breakTimeoutId);
+      breakTimeoutId = null;
+    }
+    chrome.tabs.sendMessage(tabId_global, {action: "skipBreak"});
+    chrome.runtime.sendMessage({ action: "breakSkipped" });
+  }
+
+  if (message.action === "updateBreak" || message.action === "startBreak" || message.action === "breakEnded") {
+    // Relay the message to all tabs
+    chrome.tabs.query({}, function(tabs) {
+      tabs.forEach(tab => {
+        if (tab.id) {
+          chrome.tabs.sendMessage(tab.id, message);
+        }
+      });
+    });
+  }
+
 });
 
 //                                                                            //

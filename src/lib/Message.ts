@@ -14,6 +14,9 @@ export enum MessageAction {
   DocsResumeTyping = 'resumeTyping',
   DocsSkipBreak = 'skipBreak',
   DocsStopBreak = 'stopBreak',
+  DocsStartBreak = 'startBreak',
+  DocsUpdateBreak = 'updateBreak',
+  DocsBreakEnded = 'breakEnded',
   GetOverlayContent = 'getOverlayContent',
 }
 
@@ -28,7 +31,12 @@ export type Message =
   | { action: MessageAction.DocsProgressTracker; progress: number }
   | { action: MessageAction.DocsStopTyping }
   | { action: MessageAction.DocsPauseTyping }
-  | { action: MessageAction.DocsResumeTyping };
+  | { action: MessageAction.DocsResumeTyping }
+  | { action: MessageAction.DocsStartBreak }
+  | { action: MessageAction.DocsSkipBreak }
+  | { action: MessageAction.DocsStopBreak }
+  | { action: MessageAction.DocsUpdateBreak }
+  | { action: MessageAction.DocsBreakEnded };
 
 export function Message<T extends Message['action']>(
   action: T,
@@ -40,6 +48,16 @@ export function Message<T extends Message['action']>(
       ? { text: string; typingSpeed: number; mistakeRate: number; correctionSpeed: number; breakTime: number; breakInterval: number }
     : T extends MessageAction.DocsProgressTracker
       ? { progress: number }
+      : T extends MessageAction.DocsStartBreak
+      ? {}
+      : T extends MessageAction.DocsSkipBreak
+      ? {}
+      : T extends MessageAction.DocsStopBreak
+      ? {}
+      : T extends MessageAction.DocsUpdateBreak
+      ? {}
+      : T extends MessageAction.DocsBreakEnded
+      ? {}
       : {},
 ): Extract<Message, { action: T }> {
   return { action, data } as Extract<Message, { action: T }>;

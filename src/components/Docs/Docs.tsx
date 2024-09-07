@@ -24,6 +24,7 @@ function DocsAutoTyper() {
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [notification, setNotification] = useState(false);
   const [breakCountdown, setBreakCountdown] = useState(0);
+  const [advancedSettings, setAdvancedSettings] = useState(false);
   const BACKEND_URL = 'https://examripper-288287396080.herokuapp.com';
   useEffect(() => {
     chrome.storage.local.get(['authToken'], (result) => {
@@ -87,6 +88,17 @@ function DocsAutoTyper() {
 
     return () => {
       chrome.runtime.onMessage.removeListener(handleBreakMessage);
+    };
+  }, []);
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+
+    // Cleanup function to remove the link when component unmounts
+    return () => {
+      document.head.removeChild(link);
     };
   }, []);
 
@@ -244,8 +256,7 @@ function DocsAutoTyper() {
     let contentToType = fileContent || googleDriveFile || '';
     if (contentToType) {
       calculateETA(contentToType.length, typingSpeed, mistakeRate, correctionSpeed, breakInterval, breakTime);
-
-
+      setNotification(false);
       try {
         // Send initial request to backend to get words to replace
         const response = await fetch(`${BACKEND_URL}/api/autotyper/session`, {
@@ -333,8 +344,12 @@ function DocsAutoTyper() {
     setDragging(false);
   };
 
-  const handleClick = () => {
-    document.getElementById('fileInput').click();
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Stop event propagation
+    const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
   };
 
   const handlePauseTyping = () => {
@@ -349,227 +364,202 @@ function DocsAutoTyper() {
     persistState();
   };
 
+  const handleClick2 = () => {
+    const fileInput = document.getElementById('fileinput2') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  };
+
   return (
-    <div className="flex justify-center items-center h-screen bg-[#FFB86C]">
-      <div className="App" id="App">
-        <img className="logo" src={chrome.runtime.getURL("icons/icon128.png")} alt="Logo" />
-        <h1 className="title">Google Docs Auto Typer</h1>
-        <p className="status-message">To prevent teachers viewing your revision history and seeing you copy pasting, simply drag and drop a document file or text file, select through some options such as typing speed, and click start, Examripper will automatically type out an essay with breaks and mistakes like any other human!</p>
-        <div>
-          <input id="fileInput" type="file" style={{ display: 'none' }} onChange={(e) => handleFileUpload(e.target.files[0])} accept=".txt,.docx" />
-          <div
-            id="drag-drop-area"
-            onClick={handleClick}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            style={{
-              border: dragging ? '2px solid #000' : '2px dashed #ccc',
-              padding: '20px',
-              borderRadius: '10px',
-              textAlign: 'center',
-              marginTop: '20px',
-              cursor: 'pointer',
-              transition: 'border 0.3s ease',
-            }}
-          >
-            <p className="drag-drop-text">Drag & Drop a .txt or .docx file here, or click to upload</p>
+    <div className="container">
+      <div className="main-content" id="App">
+        <img className="logo animate-pulse" src={chrome.runtime.getURL('icons/icon128.png')} alt="Logo" />
+        <h1>Google Docs Auto Typer</h1>
+        <p>To prevent teachers viewing your revision history and seeing you copy pasting, simply drag and drop a document file or text file, select through some options such as typing speed, and click start, Examripper will automatically type out an essay with breaks and mistakes like any other human!</p>
+        {!fileName && (
+          <div className="upload-area" id="upload-file-box">
+            <h2>Upload File</h2>
+            <p>Drag & Drop a .txt or .docx file here, or click to upload</p>
+
+            <input id="fileInput" type="file" className="hidden" onChange={(e) => handleFileUpload(e.target.files[0])} accept=".txt,.docx" />
+            <div id="drag-drop-area" className="drag-drop-area tooltip" onClick={handleClick} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+              <p className="drag-drop-text">Drag & Drop a .txt or .docx file here, or click to upload</p>
+              <span className="tooltiptext" onClick={handleClick}>
+                Click to upload file
+              </span>
+            </div>
+            {isPasting && (
+              <div className="pasting-overlay">
+                <div className="pasting-text">Processing pasted file...</div>
+              </div>
+            )}
           </div>
-          {isPasting && (
-            <div className="pasting-overlay">
-              <div className="pasting-text">Processing pasted file...</div>
+        )}
+
+        <div className="file-info" id="typing-menu">
+          {fileName && (
+            <div className="flex items-center justify-center mt-8">
+              <span className="file-name">{fileName} Loaded</span>
+              <input id="fileinput2" type="file" className="hidden" onChange={(e:any) => handleFileUpload(e.target.files[0])} accept=".txt,.docx" />
+              <button id="change-file-button" className="btn ml-4 tooltip" onClick={handleClick2}>
+                <i id="iconn" className="fas fa-file-upload"></i> Change File
+              </button>
             </div>
           )}
         </div>
-        <div className="file-info">
-          {fileName ? (
-            <label className="file-name">
-              {fileName} <span className="file-selected">Selected</span>
-            </label>
-          ) : (
-            <label className="file-notice">Please upload a file</label>
-          )}
-        </div>
-        <div className="slider-container">
-          <label htmlFor="typing-speed-slider">
-            Typing Speed: <span className="current-value">{typingSpeed} WPM</span>
-            <span className="tooltip">
-              <i className="fas fa-question-circle"></i>
-            </span>
-          </label>
-          <input type="range" id="typing-speed-slider" min="30" max="60" value={typingSpeed} onChange={(e) => setTypingSpeed(parseInt(e.target.value, 10))} />
-        </div>
-        <div className="slider-container">
-          <label htmlFor="typing-speed-slider">
-            Correction Speed <span className="current-value">{correctionSpeed} WPM</span>
-            <span className="tooltip">
-              <i className="fas fa-question-circle"></i>
-            </span>
-          </label>
-          <input type="range" id="typing-speed-slider" min="30" max="60" value={correctionSpeed} onChange={(e) => setCorrectionSpeed(parseInt(e.target.value, 10))} />
-        </div>
-        <div className="form-group">
-          <label className="label">Mistake Rate (Words): </label>
-          <input type="number" value={mistakeRate} className="input" onChange={(e) => setMistakeRate(parseInt(e.target.value, 10))} />
-        </div>
-        <div className="form-group">
-          <label className="label">Break Time (Minutes): </label>
-          <input type="number" value={breakTime} className="input" onChange={(e) => setBreakTime(parseInt(e.target.value, 10))} />
-        </div>
-        <div className="form-group">
-          <label className="label">Break Interval (Words): </label>
-          <input type="number" value={breakInterval} className="input" onChange={(e) => setBreakInterval(parseInt(e.target.value, 10))} />
-        </div>
-        <div className="form-group">
-          <label className="label">ETA (Estimated Time of Arrival): {eta}</label>
-        </div>
+
+        {fileName && (
+          <div id="upload-file-box" className="bg-dark-bg rounded-lg shadow-neumorph p-6 transition-transform duration-300 hover:-translate-y-1 mt-8">
+            <h2 id="settings-title" className="text-2xl font-semibold mb-4">
+              Settings
+            </h2>
+
+            <div className="slider-container mb-4 tooltip">
+              <label htmlFor="typing-speed-slider" className="block text-gray-400 mb-2">
+                <i id="iconn" className="fas fa-keyboard mr-2"></i>Typing Speed: <span className="current-value">{typingSpeed} WPM</span>
+              </label>
+              <input type="range" id="typing-speed-slider" min="30" max="60" value={typingSpeed} onChange={(e) => setTypingSpeed(parseInt(e.target.value, 10))} className="w-full appearance-none bg-gray-700 rounded-lg h-2 focus:outline-none focus:ring-2 focus:ring-accent" />
+              <span className="tooltiptext">Adjust the typing speed</span>
+            </div>
+
+            <button onClick={() => setAdvancedSettings(!advancedSettings)} id="advanced-settings-button" className="bg-accent text-white px-4 py-2 rounded-lg shadow-neumorph transition-colors duration-300 hover:bg-green-600 mb-4">
+              <i id="iconn" className="fas fa-cog mr-2"></i>Advanced Settings
+            </button>
+
+            {advancedSettings && (
+              <div id="advanced-settings">
+                <div className="slider-container">
+                  <label htmlFor="correction-speed-slider" className="block text-gray-400 mb-2">
+                    <i id="iconn" className="fas fa-undo-alt mr-2"></i>Correction Speed: <span className="current-value">{correctionSpeed} WPM</span>
+                  </label>
+                  <input type="range" id="typing-speed-slider" min="30" max="60" value={correctionSpeed} onChange={(e) => setCorrectionSpeed(parseInt(e.target.value, 10))} className="w-full appearance-none bg-gray-700 rounded-lg h-2 focus:outline-none focus:ring-2 focus:ring-accent" />
+                  <span id="label" className="tooltiptext" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                    Adjust the correction speed
+                  </span>
+                </div>
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label className="label" id="form-labels">
+                    <i id="iconn" className="fas fa-exclamation-triangle mr-2"></i>Mistake Rate (Words):
+                  </label>
+                  <input type="number" id="label-inputs" value={mistakeRate} className="input" onChange={(e) => setMistakeRate(parseInt(e.target.value, 10))} />
+                  <span className="tooltiptext">Set the rate of mistakes per words</span>
+                </div>
+                <div className="form-group">
+                  <label className="label" id="form-labels">
+                    <i id="iconn" className="fas fa-coffee mr-2"></i>Break Time (Minutes):
+                  </label>
+                  <input type="number" id="label-inputs" value={breakTime} className="input" onChange={(e) => setBreakTime(parseInt(e.target.value, 10))} />
+                  <span className="tooltiptext">Set the time for each break</span>
+                </div>
+                <div className="form-group">
+                  <label className="label" id="form-labels">
+                    <i id="iconn" className="fas fa-clock mr-2"></i>Break Interval (Words):{' '}
+                  </label>
+                  <input type="number" id="label-inputs" value={breakInterval} className="input" onChange={(e) => setBreakInterval(parseInt(e.target.value, 10))} />
+                  <span className="tooltiptext">Set the interval of breaks</span>
+                </div>
+              </div>
+            )}
+            <div className="form-group mb-4">
+              <label className="block text-gray-400 mb-2">
+                <i id="iconn" className="fas fa-hourglass-half mr-2"></i>ETA (Estimated Time of Arrival): {eta}
+              </label>
+            </div>
+          </div>
+        )}
 
         <div id="error-message" className="error-message" style={{ display: 'none' }}>
           <span id="error-text"></span>
         </div>
-        {
-          notification && (
-            <div className="notification">
-              <p
-              style={{
-                color: '#F8F8F2',
-                fontSize: '18px',
-                fontWeight: 'bold',
-              }}
-              >Retrieving Session...  </p>
-            </div>
-          )
-        }
-
-        {isOnBreak && (
+        {isOnBreak ? (
           <div className="break-countdown">
-            Break time! Resuming in {breakCountdown} seconds...
+            <button className="break-button" id="break-button">
+              <i id="iconn" className="fas fa-coffee mr-2 animate-pulse"></i>
+              Taking Break ({breakCountdown} seconds)
+            </button>
             <button
               className="skip-break-button"
+              id="skip-break-button"
               onClick={handleSkipBreak}
-              style={{
-                backgroundColor: '#66bd77',
-                border: 'none',
-                padding: '15px 20px',
-                fontSize: '18px',
-                cursor: 'pointer',
-                borderRadius: '8px',
-                color: '#F8F8F2',
-                display: 'block',
-                margin: '10px auto',
-                position: 'relative',
-                overflow: 'hidden',
-                width: '150px',
-              }}
             >
+              <i id="iconn" className="fas fa-forward mr-2"></i>
               Skip Break
             </button>
           </div>
-        )}
-
-        <div className="buttons-group">
-          <div>
-            {!isTyping && replacementProgress < 100 ? (
-              <div>
-                <button
-                  id="start-button"
-                  className="start-button"
-                  onClick={handleStartTyping}
-                  disabled={isTyping && replacementProgress < 100}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
-                  <span>{replacementProgress > 0 && replacementProgress < 100 ? `Replacing ${Math.ceil((replacementProgress / 100) * wordsToReplace.length)}/${wordsToReplace.length} words` : 'Start'}</span>
-                  {replacementProgress > 0 && replacementProgress < 100 && (
-                    <div
-                      id="progress-bar"
-                      style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        width: `${replacementProgress}%`,
-                        height: '4px',
-                        backgroundColor: '#F8F8F2',
-                        transition: 'width 0.3s ease-in-out',
-                      }}
-                    ></div>
-                  )}
-                </button>
-              </div>
-            ) : (
-              <div>
-                {isTyping && (
+        ) : (
+          <div className="buttons-group">
+            <div>
+              {!isTyping && replacementProgress < 100 ? (
+                <div>
                   <button
-                    id="stop-button"
-                    className="stop-button"
-                    onClick={handleStopTyping}
+                    id="start-button"
+                    className="start-button"
+                    onClick={handleStartTyping}
+                    disabled={isTyping && replacementProgress < 100}
                     style={{
                       display: 'flex',
+                      flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      position: 'relative',
+                      overflow: 'hidden',
                     }}
                   >
-                    Stop
+                    {notification ? <i id="iconn" className="fas fa-play mr-2"></i> : replacementProgress > 0 && replacementProgress < 100 ? <i id="iconn" className="fas fa-sync-alt mr-2"></i> : <i id="iconn" className="fas fa-play mr-2"></i>}
+                    <span>{notification ? 'Starting Session' : replacementProgress > 0 && replacementProgress < 100 ? `Retrieving Replacements ${Math.ceil((replacementProgress / 100) * wordsToReplace.length)}/${wordsToReplace.length}` : 'Start'}</span>
+                    {replacementProgress > 0 && replacementProgress < 100 && (
+                      <div
+                        id="progress-bar"
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          width: `${replacementProgress}%`,
+                          height: '4px',
+                          backgroundColor: '#F8F8F2',
+                          transition: 'width 0.3s ease-in-out',
+                        }}
+                      ></div>
+                    )}
                   </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div>
-            {isTyping && (
-              <button
-                id="pause-resume-button"
-                className={isTyping ? 'solving-button' : 'start-button'}
-                onClick={isPaused ? handleResumeTyping : handlePauseTyping}
-                disabled={!isTyping}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#FFB86C',
-                  border: 'none',
-                  padding: '15px 20px',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  borderRadius: '8px',
-                  color: '#F8F8F2',
-                  margin: '20px auto',
-                }}
-              >
-                {isPaused ? 'Resume' : 'Pause'}
-                {!isPaused ? (
-                  <div
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      marginLeft: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 320 512"
-                      width="100%"
-                      height="100%"
-                      fill="currentColor" // This will use the current text color
+                </div>
+              ) : (
+                <div>
+                  {isTyping && (
+                    <button
+                      id="stop-button"
+                      className="stop-button"
+                      onClick={handleStopTyping}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
                     >
-                      <path d="M48 64C21.5 64 0 85.5 0 112L0 400c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48L48 64zm192 0c-26.5 0-48 21.5-48 48l0 288c0 26.5 21.5 48 48 48l32 0c26.5 0 48-21.5 48-48l0-288c0-26.5-21.5-48-48-48l-32 0z" />
-                    </svg>
-                  </div>
-                ) : null}
-              </button>
-            )}
+                      <i id="iconn" className="fas fa-stop mr-2"></i>
+                      Stop
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div>
+              {isTyping && (
+                <button
+                  id="pause-resume-button"
+                  className={isTyping ? 'solving-button' : 'start-button'}
+                  onClick={isPaused ? handleResumeTyping : handlePauseTyping}
+                  disabled={!isTyping}
+                >
+                  {!isPaused ? <i id="iconn" className="fas fa-pause mr-2"></i> : <i id="iconn" className="fas fa-play mr-2"></i>}
+                  {isPaused ? 'Resume' : 'Pause'}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* <div>
           {isTyping && (

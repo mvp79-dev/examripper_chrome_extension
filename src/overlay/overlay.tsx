@@ -16,7 +16,6 @@ overlayWindow.style.cssText = `
     background-color: white;
     z-index: 10000;
     overflow-y: auto;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.2);
     transition: transform 0.3s ease-in-out;
 `;
 document.body.appendChild(overlayWindow);
@@ -54,7 +53,6 @@ logoImage.style.cssText = `
     transition: transform 0.3s ease;
 `;
 toggleButton.appendChild(logoImage);
-
 // Check if the user is a donor
 chrome.storage.local.get(['donor_status'], function({ donor_status }) {
     if (donor_status === true) {
@@ -72,7 +70,7 @@ interface UrlRenderMap {
 async function loadAndRenderComponent(url: string): Promise<void> {
     try {
         const div = document.createElement('div');
-        div.style.backgroundColor = '#2b292e';
+        // div.style.backgroundColor = '#2b292e';
         const root = ReactDOM.createRoot(div); // Corrected capitalization
 
         // Define a mapping for the URLs

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import mammoth from 'mammoth';
-import { styles } from './styles';
+import { styles } from '../EdPuzzle/styles';
 function EdPuzzle() {
   const [fileContent, setFileContent] = useState('');
   const [googleDriveFile, setGoogleDriveFile] = useState(null);

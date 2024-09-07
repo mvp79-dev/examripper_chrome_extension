@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import DocsAutoTyper from './components/TempComponent';
+import DocsAutoTyper from './components/Docs/Docs';
 
 const container = document.getElementById('root');
 if (container) {

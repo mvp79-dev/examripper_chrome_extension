@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import mammoth from 'mammoth';
 import { styles } from './styles';
-function DocsAutoTyper() {
+function EdPuzzle() {
   const [fileContent, setFileContent] = useState('');
   const [googleDriveFile, setGoogleDriveFile] = useState(null);
   const [typingSpeed, setTypingSpeed] = useState(30);
@@ -592,4 +592,4 @@ function DocsAutoTyper() {
   );
 }
 
-export default DocsAutoTyper;
+export default EdPuzzle;

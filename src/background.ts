@@ -16,7 +16,7 @@ function injectOverlayIcon(tabId: number) {
   });
 }
 
-let tabId_global : any = null;
+let tabId_global: any = null;
 let breakIntervalId: number | NodeJS.Timeout | ReturnType<typeof setTimeout> | null = null;
 let breakTimeoutId:NodeJS.Timeout | ReturnType<typeof setTimeout> |  number | null = null;
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
@@ -45,10 +45,10 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     console.error('Tab ID is not set');
     return;
   }
-  
-  console.log('message.action', message.action)
 
-  if (message.action === "startTyping") {
+  console.log('message.action', message.action);
+
+  if (message.action === 'startTyping') {
     console.log('Starting typing on tabId:', tabId_global);
     chrome.scripting.executeScript({
       target: { tabId: tabId_global },
@@ -68,61 +68,21 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     chrome.runtime.sendMessage({ action: "progressUpdate", progress: message.progress });
   }
 
-  if (message.action === "stopTyping") {
+  else if (message.action === "stopTyping") {
     console.log('Stopping typing on tabId:', tabId_global);
-    chrome.tabs.sendMessage(tabId_global, {action: "stopTyping"}, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error("Error sending stopTyping message:", chrome.runtime.lastError);
-      } else {
-        console.log("stopTyping message sent successfully", response);
-      }
-    });
-    if (breakIntervalId) {
-      clearInterval(breakIntervalId);
-      breakIntervalId = null;
-    }
-    chrome.runtime.sendMessage({ action: "stopBreak" });
+    // Send a message to the content script to stop typing
+    chrome.tabs.sendMessage(tabId_global, {action: "stopTyping"});
   }
 
   else if (message.action === "pauseTyping") {
     console.log('Pausing typing on tabId:', tabId_global);
-    chrome.tabs.sendMessage(tabId_global, {action: "pauseTyping"});
-  }
-
-  else if (message.action === "resumeTyping") {
+    chrome.tabs.sendMessage(tabId_global, { action: 'pauseTyping' });
+  } else if (message.action === 'resumeTyping') {
     console.log('Resuming typing on tabId:', tabId_global);
-    chrome.tabs.sendMessage(tabId_global, {action: "resumeTyping"});
+    chrome.tabs.sendMessage(tabId_global, { action: 'resumeTyping' });
   }
-
-  else if (message.action === "startBreak") {
-    console.log('Starting break on tabId:', tabId_global);
-    chrome.tabs.sendMessage(tabId_global, {action: "startBreak"});
-  }
-
-  else if (message.action === "skipBreak") {
-    console.log('Skipping break');
-    if (breakTimeoutId !== null) {
-      clearTimeout(breakTimeoutId);
-      breakTimeoutId = null;
-    }
-    chrome.tabs.sendMessage(tabId_global, {action: "skipBreak"});
-    chrome.runtime.sendMessage({ action: "breakSkipped" });
-  }
-
-  if (message.action === "updateBreak" || message.action === "startBreak" || message.action === "breakEnded") {
-    // Relay the message to all tabs
-    chrome.tabs.query({}, function(tabs) {
-      tabs.forEach(tab => {
-        if (tab.id) {
-          chrome.tabs.sendMessage(tab.id, message);
-        }
-      });
-    });
-  }
-
 
 });
-
 
 //                                                                            //
 // EXAM RIPPER
@@ -182,7 +142,7 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (changeInfo.status === 'complete' && tab.active) {
     updatePopupPage(tabId, tab.url);
   }
-  if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith("https://docs.google.com/document/")) {
+  if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith('https://docs.google.com/document/')) {
     tabId_global = tabId;
     chrome.storage.local.remove('autoTyperState', () => {
       if (chrome.runtime.lastError) {
@@ -220,28 +180,18 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ['requestHeaders'],
 );
 
-function injectScript(
-  text: string,
-  typingSpeed: number,
-  mistakeRate: number,
-  correctionSpeed: number,
-  breakTime: number,
-  breakInterval: number,
-) {
-  console.log("Injecting script with text:", text);
+function injectScript(text: string, typingSpeed: number, mistakeRate: number, correctionSpeed: number, breakTime: number, breakInterval: number) {
+  console.log('Injecting script with text:', text);
   let isTyping = true;
   let isPaused = false;
   let isOnBreak = false;
 
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message) => {
     if (message.action === "stopTyping") {
       isTyping = false;
-      isPaused = false;
-      isOnBreak = false;
-      console.log("Typing stopped");
     } else if (message.action === "pauseTyping") {
       isPaused = true;
-    } else if (message.action === "resumeTyping") {
+    } else if (message.action === 'resumeTyping') {
       isPaused = false;
     } else if (message.action === "startBreak") {
       isOnBreak = true;
@@ -265,21 +215,21 @@ function injectScript(
   }
 
   async function simulateTyping(inputElement: any, char: any, delay: any) {
-    console.log("Typing:", char);
+    console.log('Typing:', char);
     return new Promise((resolve) => {
       setTimeout(() => {
         let eventObj;
-        if (char === "\n") {
-          eventObj = new KeyboardEvent("keydown", {
+        if (char === '\n') {
+          eventObj = new KeyboardEvent('keydown', {
             bubbles: true,
-            key: "Enter",
-            code: "Enter",
+            key: 'Enter',
+            code: 'Enter',
             keyCode: 13,
             which: 13,
             charCode: 13,
           });
         } else {
-          eventObj = new KeyboardEvent("keypress", {
+          eventObj = new KeyboardEvent('keypress', {
             bubbles: true,
             key: char,
             charCode: char.charCodeAt(0),
@@ -298,38 +248,34 @@ function injectScript(
     const upperBoundValue = lowerBoundValue * 0.8;
     let wordCount = 0;
     let mistakeCount = 0;
-    console.log("Typing string:", string);
+    console.log('Typing string:', string);
     for (let i = 0; i < string.length; i++) {
       if (!isTyping) {
-        console.log("Typing stopped");
+        console.log('Typing stopped');
         break;
       }
       while (isPaused) {
-        if (!isTyping) break; // Check if typing should stop during pause
         await new Promise(resolve => setTimeout(resolve, 100)); // Check every 100ms
       }
 
       const char = string[i];
-      const randomDelay =
-        Math.floor(Math.random() * (upperBoundValue - lowerBoundValue + 1)) +
-        lowerBoundValue;
+      const randomDelay = Math.floor(Math.random() * (upperBoundValue - lowerBoundValue + 1)) + lowerBoundValue;
 
       if (wordCount >= breakInterval) {
         wordCount = 0;
         await startBreak(breakTime*60);
       }
 
-
       await simulateTyping(inputElement, char, randomDelay);
-      if (char === " " || char === "\n") wordCount++;
+      if (char === ' ' || char === '\n') wordCount++;
 
       if (i % 10 === 0 || i === string.length - 1) {
         const progress = Math.round((i / string.length) * 100);
-        chrome.runtime.sendMessage({ action: "updateProgress", progress });
+        chrome.runtime.sendMessage({ action: 'updateProgress', progress });
       }
     }
     if (!isTyping) {
-      chrome.runtime.sendMessage({ action: "typingComplete" });
+      chrome.runtime.sendMessage({ action: 'typingComplete' });
     }
   }
 
@@ -349,11 +295,11 @@ function injectScript(
     chrome.runtime.sendMessage({ action: "breakEnded" });
   }
 
-  const iframe = document.querySelector(".docs-texteventtarget-iframe");
+  const iframe = document.querySelector('.docs-texteventtarget-iframe');
   if (iframe) {
     const input = iframe.contentDocument.activeElement;
     typeStringWithRandomDelay(input, text);
   } else {
-    console.error("Input element not found.");
+    console.error('Input element not found.');
   }
 }

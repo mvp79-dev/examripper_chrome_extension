@@ -1,4 +1,4 @@
-import { normalize as normalizePath } from 'node:path';
+import { NormalizePath } from '../../src/lib/external/Platform/Node/Path.js';
 
 export interface AddonBuildConfig {
   browsers: string[];
@@ -16,7 +16,7 @@ export function getBaseToPathsMap(
 ) {
   const baseMap = new Map<string, Set<string>>();
   for (const [base, patterns] of Object.entries(baseToPatternsMap)) {
-    const normalized_base = normalizePath('./' + base);
+    const normalized_base = NormalizePath('./' + base);
     const pathSet = new Set<string>();
     for (const pattern of patterns //
       .map((_) => (transformers?.transformPattern ? transformers?.transformPattern(_) : _))

@@ -1,11 +1,16 @@
 import { Sleep } from '../lib/external/Algorithm/Sleep.js';
-import { Once, Optional } from '../lib/external/Design Pattern/Observer/Store.js';
+import { Const, Optional } from '../lib/external/Design Pattern/Observer/Store.js';
 import { type WebRequest, RebuildAndSendRequest } from '../lib/external/Platform/Browser/Extension/WebRequest.js';
 import { ChildListObserver } from '../lib/external/Platform/Web/DOM/MutationObserver/ChildList.js';
 import { ElementAddedObserver } from '../lib/external/Platform/Web/DOM/MutationObserver/ElementAdded.js';
 import { Message, MessageAction } from '../lib/Message.js';
 
 interface AssignmentData {
+  medias?: { questions: Question[] }[];
+  // extras added in
+  privacy?: 'public' | 'private';
+}
+interface AssignmentAttemptData {
   _id: string;
   mediaId: string;
   teacherAssignmentId: string;
@@ -65,10 +70,11 @@ class QuestionSection {
 
 let timelineUnlocked = false;
 
-const assignment_data = new Once<AssignmentData>();
-const edpuzzle_version = new Once<string>();
-const page_webrequest = new Once<WebRequest>();
-const questions_array = new Once<Question[]>();
+const assignment_data = new Const<AssignmentData>();
+const assignment_attempt_data = new Const<AssignmentAttemptData>();
+const assignment_attempt_webrequest = new Const<WebRequest>();
+const edpuzzle_version = new Const<string>();
+const questions_array = new Const<Question[]>();
 
 const click_to_answer = new Optional<boolean>();
 const questionObserver_unsubscribe = new Optional<() => void>();
@@ -80,16 +86,16 @@ async function onMessageHandler(message: Message) {
   try {
     switch (message.action) {
       case MessageAction.Edpuzzle_WebRequest:
-        page_webrequest.set(message.data.webRequest);
+        assignment_attempt_webrequest.set(message.data.webRequest);
         break;
       case MessageAction.Edpuzzle_UnlockTimeline:
-        unlockTimeline(await assignment_data.get(), await edpuzzle_version.get());
+        unlockTimeline(await assignment_attempt_data.get(), await edpuzzle_version.get());
         break;
       case MessageAction.Edpuzzle_ClickToAnswer:
         click_to_answer.set(message.data.enabled);
         break;
       case MessageAction.Edpuzzle_SubmitAllAnswers:
-        submitAllAnswers(await assignment_data.get(), await edpuzzle_version.get());
+        submitAllAnswers(await assignment_attempt_data.get(), await edpuzzle_version.get());
         break;
     }
   } catch (error) {
@@ -99,8 +105,9 @@ async function onMessageHandler(message: Message) {
 
 async function onInit() {
   try {
-    await getAssignmentData(await page_webrequest.get());
-    await getQuestions((await assignment_data.get()).mediaId);
+    await getAssignmentData(await assignment_attempt_webrequest.get());
+    await getAssignmentAttemptData(await assignment_attempt_webrequest.get());
+    await getQuestions((await assignment_attempt_data.get()).mediaId);
     click_to_answer.subscribe((enabled) => {
       if (enabled === true) {
         setupQuestionObserver();
@@ -122,6 +129,7 @@ window.addEventListener('pageshow', (event) => {
     console.log('%cThis page was loaded normally.', 'color:red');
 
     getVersion();
+    injectVideoSpeedFeature();
     chrome.runtime.onMessage.addListener(onMessageHandler);
     chrome.runtime.sendMessage(Message(MessageAction.Edpuzzle_GetWebRequest, {}));
     chrome.runtime.sendMessage(Message(MessageAction.Edpuzzle_GetClickToAnswer, {}));
@@ -133,7 +141,7 @@ window.addEventListener('pageshow', (event) => {
 function getVersion(): void {
   const script = document.createElement('script');
   script.async = false;
-  script.src = chrome.runtime.getURL('web_accessible_resources/edpuzzle_inject.js');
+  script.src = chrome.runtime.getURL('web_accessible_resources/edpuzzle_inject_version.js');
   script.type = 'text/javascript';
   document.head.append(script);
   const observer = new ElementAddedObserver({
@@ -147,33 +155,80 @@ function getVersion(): void {
   });
 }
 
+// video speed feature
+function injectVideoSpeedFeature(): void {
+  const script = document.createElement('script');
+  script.async = false;
+  script.src = chrome.runtime.getURL('web_accessible_resources/edpuzzle_inject_video_speed.js');
+  script.type = 'text/javascript';
+  document.head.append(script);
+}
+
 async function getAssignmentData(webRequest: WebRequest, retryCount = 0): Promise<void> {
   if (retryCount > 5) {
     throw 'All requests for data failed.';
   }
-  const response = await RebuildAndSendRequest(webRequest);
+  // clone the WebRequest data and change url
+  const assignment_webrequest: WebRequest = {};
+  if (webRequest.bodyDetails) {
+    assignment_webrequest.bodyDetails = { ...webRequest.bodyDetails };
+    assignment_webrequest.bodyDetails.url = webRequest.bodyDetails.url.replace('/attempt?type=media', '');
+  }
+  if (webRequest.headersDetails) {
+    assignment_webrequest.headersDetails = { ...webRequest.headersDetails };
+    assignment_webrequest.headersDetails.url = webRequest.headersDetails.url.replace('/attempt?type=media', '');
+  }
+  const response = await RebuildAndSendRequest(assignment_webrequest);
   if (response?.status === 200) {
     assignment_data.set(await response.json());
+    // console.log(assignment_webrequest.bodyDetails?.url ?? assignment_webrequest.headersDetails?.url ?? '???');
+    // console.log(await assignment_data.get());
   } else {
     await Sleep(500);
     await getAssignmentData(webRequest, retryCount + 1);
   }
 }
 
+async function getAssignmentAttemptData(webRequest: WebRequest, retryCount = 0): Promise<void> {
+  if (retryCount > 5) {
+    throw 'All requests for data failed.';
+  }
+  const response = await RebuildAndSendRequest(webRequest);
+  if (response?.status === 200) {
+    assignment_attempt_data.set(await response.json());
+    // console.log(webRequest.bodyDetails?.url ?? webRequest.headersDetails?.url ?? '???');
+    // console.log(await assignment_attempt_data.get());
+  } else {
+    await Sleep(500);
+    await getAssignmentAttemptData(webRequest, retryCount + 1);
+  }
+}
+
 async function getQuestions(mediaId?: string): Promise<void> {
-  if (!mediaId) {
+  // if (!mediaId) // need to get privacy information anyways
+  {
     const assignmentId = new URL(window.location.href).pathname.split('/').at(-2);
     const assignments_response = await fetch(`https://edpuzzle.com/api/v3/assignments/${assignmentId}`);
     const assignments_data = await assignments_response.json();
-    const { teacherAssignments } = assignments_data ?? {};
+    const { teacherAssignments, medias } = assignments_data ?? {};
+    // console.log({ teacherAssignments, medias });
     if (!Array.isArray(teacherAssignments)) {
       throw 'Missing { teacherAssignments }';
+    }
+    if (Array.isArray(medias)) {
+      (await assignment_data.get()).privacy = medias[0].privacy;
+    } else {
+      console.error('warning: could not determine if assignment is public or private. defaulting to private');
+      (await assignment_data.get()).privacy = 'private';
     }
     const { contentId } = teacherAssignments[0];
     if (!contentId) {
       throw 'Missing { contentId }';
     }
-    mediaId = contentId;
+    if (mediaId !== contentId) {
+      console.error('warning: mediaId not equal to contentId. not sure what this could mean');
+      mediaId = contentId;
+    }
   }
   if (!mediaId) {
     throw 'Missing { mediaId }';
@@ -183,9 +238,11 @@ async function getQuestions(mediaId?: string): Promise<void> {
     credentials: 'omit',
   });
   const media_data = await media_response.json();
-  const { questions } = media_data ?? {};
+  let { questions } = media_data ?? {};
   if (!Array.isArray(questions)) {
-    throw 'Missing { questions }';
+    // throw 'Missing { questions }';
+    // console.log('Could not get questions with answers. Using original questions data.');
+    questions = (await assignment_data.get()).medias?.[0].questions;
   }
 
   const questionToChoicesArray: Question[] = [];
@@ -195,7 +252,7 @@ async function getQuestions(mediaId?: string): Promise<void> {
   questions_array.set((questions as Question[]).sort(({ time: a }, { time: b }) => a - b));
 }
 
-async function unlockTimeline(data: AssignmentData, version: string): Promise<void> {
+async function unlockTimeline(data: AssignmentAttemptData, version: string): Promise<void> {
   if (timelineUnlocked || (data.timeIntervals.at(-1)?.views ?? 0) > 0) {
     timelineUnlocked = true;
     // console.log('Already Unlocked');
@@ -220,6 +277,8 @@ async function unlockTimeline(data: AssignmentData, version: string): Promise<vo
     window.location.reload();
   }
 }
+
+// Answering Questions
 
 async function setupQuestionObserver() {
   if ((await questionObserver_unsubscribe.get()) === undefined) {
@@ -323,6 +382,8 @@ async function markCorrectAnswers(questionSection: QuestionSection) {
     //  console.log(questionSection.text, '===', parsedQuestion.Text);
     //  console.log(questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text);
     if (questionSection.text === parsedQuestion.Html || questionSection.text === parsedQuestion.Text) {
+      // console.log({ question_text: questionSection.text });
+      // TODO: after confirming the question and answers, send to AI server
       const treeWalker = document.createTreeWalker(questionSection.answerSection, NodeFilter.SHOW_ELEMENT);
       while (treeWalker.nextNode()) {
         if (treeWalker.currentNode instanceof HTMLParagraphElement) {
@@ -347,7 +408,7 @@ async function markCorrectAnswers(questionSection: QuestionSection) {
   }
 }
 
-async function submitAllAnswers(data: AssignmentData, version: string): Promise<void> {
+async function submitAllAnswers(data: AssignmentAttemptData, version: string): Promise<void> {
   // find out which questions have already been answered
   const attempt_response = await fetch(`https://edpuzzle.com/api/v3/assignments/${data.teacherAssignmentId}/attempt`, {
     credentials: 'include',

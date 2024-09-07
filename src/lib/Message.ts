@@ -28,10 +28,8 @@ export type Message =
   | { action: MessageAction.DocsProgressTracker; progress: number }
   | { action: MessageAction.DocsStopTyping }
   | { action: MessageAction.DocsPauseTyping }
-  | { action: MessageAction.DocsResumeTyping }
-  | { action: MessageAction.DocsSkipBreak }
-  | { action: MessageAction.DocsStopBreak }
-  | { action: MessageAction.GetOverlayContent }
+  | { action: MessageAction.DocsResumeTyping };
+
 export function Message<T extends Message['action']>(
   action: T,
   data: T extends MessageAction.Edpuzzle_WebRequest //
@@ -42,12 +40,6 @@ export function Message<T extends Message['action']>(
       ? { text: string; typingSpeed: number; mistakeRate: number; correctionSpeed: number; breakTime: number; breakInterval: number }
     : T extends MessageAction.DocsProgressTracker
       ? { progress: number }
-      : T extends MessageAction.DocsSkipBreak
-      ? {}
-      : T extends MessageAction.DocsStopBreak
-      ? {}
-      : T extends MessageAction.GetOverlayContent
-      ? {}
       : {},
 ): Extract<Message, { action: T }> {
   return { action, data } as Extract<Message, { action: T }>;

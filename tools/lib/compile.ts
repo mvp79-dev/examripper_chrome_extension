@@ -49,7 +49,12 @@ export async function compile(tempDir: string = './temp', scriptExtensions = ['.
             sourcemap,
             splitting: false,
             target: 'browser',
-            define: { 'Bun.env.DEBUG': JSON.stringify(debug ? 'true' : 'false') },
+            define: {
+              'Bun.env.DEBUG': JSON.stringify(debug ? 'true' : 'false'),
+              'process.env': '{}',
+              'process.platform': '"browser"',
+              'process.version': '"0.0.0"',
+            },
           });
           if (success) {
             await Bun.write(NormalizePath(`./${tempBase}/${tempPath}`), `(function () {\n${await outputs[0].text()}})();`);

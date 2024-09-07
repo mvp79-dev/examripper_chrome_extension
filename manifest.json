@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Examripper | The best cheat bot for Apex Learning and Edpuzzle Hack",
-  "description": "Automatically finshes exams on websites such as Apex Learning",
+  "description": "The #1 Best Cheat for Students, Inclduing hack cheat bots for Apex Learning, Edpuzzle, and a Google Docs Autotyper!",
   "version": "1.7.1",
   "permissions": ["activeTab", "scripting", "storage", "tabs", "webRequest"],
   "host_permissions": ["<all_urls>"],
@@ -35,6 +35,10 @@
       "matches": ["<all_urls>"],
       "js": ["content_scripts/login.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": ["https://docs.google.com/document/*"],
+      "js": ["overlay/overlay.js"]
     }
   ],
   "web_accessible_resources": [
@@ -44,7 +48,15 @@
     },
     {
       "matches": ["*://docs.google.com/*"],
-      "resources": ["popup/docsAutoType.html"]
+      "resources": ["popup/docsAutoTyper.html","src/index.js", "src/popup/docsAutoType.css"]
+    },
+    {
+      "matches": ["<all_urls>"],
+      "resources": ["overlay/helloWorld.js", "popup/docsAutoType.css", "components/docsAutoTyper.js", "components/TempComponent.tsx"]
+    },
+    {
+      "matches":["<all_urls>"],
+      "resources":["icons/icon16.png","icons/icon48.png","icons/icon128.png"]
     }
   ],
   "icons": {

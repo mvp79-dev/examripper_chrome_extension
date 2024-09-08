@@ -2,7 +2,7 @@
 import ReactDOM from 'react-dom/client';  // Correct capitalization
 import React from 'react';
 import DocsAutoTyper from '../components/Docs/Docs';  // Ensure this path is correct
-import EdpuzzleComponent from '../components/Edpuzzle/Edpuzzle';  // Ensure this path is correct
+import EdPuzzle from '../components/EdPuzzle/EdPuzzle';  // Ensure this path is correct
 
 // Create the overlay div
 const overlayWindow = document.createElement('div');
@@ -56,7 +56,11 @@ toggleButton.appendChild(logoImage);
 // Check if the user is a donor
 chrome.storage.local.get(['donor_status'], function({ donor_status }) {
     if (donor_status === true) {
+        console.log('User is a donor');
         document.body.appendChild(toggleButton);
+    }
+    else {
+        console.log('User is not a donor');
     }
 });
 
@@ -72,11 +76,11 @@ async function loadAndRenderComponent(url: string): Promise<void> {
         const div = document.createElement('div');
         // div.style.backgroundColor = '#2b292e';
         const root = ReactDOM.createRoot(div); // Corrected capitalization
-
+        console.log(new URL(url).origin);
         // Define a mapping for the URLs
         const urlRenderMap: UrlRenderMap = {
             'https://docs.google.com': <DocsAutoTyper />,
-            'https://edpuzzle.com': <EdpuzzleComponent />
+            'https://edpuzzle.com': <EdPuzzle />
         };
 
         // Render the appropriate component based on the URL

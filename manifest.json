@@ -28,7 +28,7 @@
     },
     {
       "matches": ["*://*.edpuzzle.com/*"],
-      "js": ["content_scripts/edpuzzle_idle.js"],
+      "js": ["overlay/overlay.js", "content_scripts/edpuzzle_idle.js"],
       "run_at": "document_idle"
     },
     {

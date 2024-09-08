@@ -30,3 +30,4 @@ build
 debug
 # React Component Preview
 previewConfig.json
+release/*

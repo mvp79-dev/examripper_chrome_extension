@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Examripper | The best cheat bot for Apex Learning and Edpuzzle Hack",
-  "description": "The #1 Best Cheat for Students, Inclduing hack cheat bots for Apex Learning, Edpuzzle, and a Google Docs Autotyper!",
+  "description": "All in One AI School Cheat for Students, Inclduing hack cheat bots for Apex Learning, Edpuzzle, and a Google Docs Autotyper!",
   "version": "1.7.1",
   "permissions": ["activeTab", "scripting", "storage", "tabs", "webRequest"],
   "host_permissions": ["<all_urls>"],
@@ -32,7 +32,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["<all_urls>"],
+      "matches": ["https://examripper-288287396080.herokuapp.com/*"],
       "js": ["content_scripts/login.js"],
       "run_at": "document_start"
     },
@@ -51,11 +51,11 @@
       "resources": ["popup/docsAutoTyper.html","src/index.js", "src/popup/docsAutoType.css"]
     },
     {
-      "matches": ["<all_urls>"],
+      "matches": ["*://docs.google.com/*"],
       "resources": ["overlay/helloWorld.js", "popup/docsAutoType.css", "components/docsAutoTyper.js", "components/TempComponent.tsx"]
     },
     {
-      "matches":["<all_urls>"],
+      "matches":["*://*.edpuzzle.com/*", "*://docs.google.com/*"],
       "resources":["icons/icon16.png","icons/icon48.png","icons/icon128.png"]
     }
   ],

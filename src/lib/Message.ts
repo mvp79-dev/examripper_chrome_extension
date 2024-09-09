@@ -18,6 +18,8 @@ export enum MessageAction {
   DocsUpdateBreak = 'updateBreak',
   DocsBreakEnded = 'breakEnded',
   GetOverlayContent = 'getOverlayContent',
+  EdpuzzleOverlayUnlockTimeline = 'EdpuzzleOverlayUnlockTimeline',
+  EdpuzzleFinishAllMultipleChoice = 'EdpuzzleFinishAllMultipleChoice',
 }
 
 export type Message =
@@ -36,7 +38,9 @@ export type Message =
   | { action: MessageAction.DocsSkipBreak }
   | { action: MessageAction.DocsStopBreak }
   | { action: MessageAction.DocsUpdateBreak }
-  | { action: MessageAction.DocsBreakEnded };
+  | { action: MessageAction.DocsBreakEnded }
+  | { action: MessageAction.EdpuzzleOverlayUnlockTimeline }
+  | { action: MessageAction.EdpuzzleFinishAllMultipleChoice };
 
 export function Message<T extends Message['action']>(
   action: T,

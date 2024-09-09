@@ -38,6 +38,16 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
           chrome.tabs.sendMessage(tab_id, Message(MessageAction.Edpuzzle_ClickToAnswer, { enabled }));
         });
         break;
+      case MessageAction.EdpuzzleOverlayUnlockTimeline:
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0].id) chrome.tabs.sendMessage(tabs[0].id, Message(MessageAction.Edpuzzle_UnlockTimeline, {}));
+        });
+        break;
+      case MessageAction.EdpuzzleFinishAllMultipleChoice:
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0].id) chrome.tabs.sendMessage(tabs[0].id, Message(MessageAction.Edpuzzle_SubmitAllAnswers, {}));
+        });
+        break;
     }
   }
 

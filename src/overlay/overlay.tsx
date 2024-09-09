@@ -14,6 +14,7 @@ overlayWindow.style.cssText = `
     width: 400px;
     height: 100%;
     background-color: gray;
+    padding-top: 30px;
     z-index: 10000;
     overflow-y: auto;
     transition: transform 0.3s ease-in-out;

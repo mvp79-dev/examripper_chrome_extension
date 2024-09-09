@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { styles } from '../EdPuzzle/styles';
+import { Global } from '@emotion/react';
+import { styles } from './styles';
 import { Message, MessageAction } from '../../lib/Message.js';
 import { Sleep } from '../../lib/external/Algorithm/Sleep.js';
 import { Const, Optional } from '../../lib/external/Design Pattern/Observer/Store.js';
@@ -472,25 +473,28 @@ function EdPuzzle() {
 
 
   return (
-    <div className="container">
-      <img src="../icons/icon128.png" alt="Logo" className="logo" />
-      <h1>Control Panel</h1>
-      <div>
-        <label htmlFor="click-answer">Enable Click to Answer:</label>
-        <label className="switch">
-          <input type="checkbox" id="click-answer" name="click-answer" checked={clickToAnswer} onChange={handleCheckboxChange} />
-          <span className="slider round"></span>
-        </label>
+    <>
+      <Global styles={styles} />
+      <div className="container">
+        <img src={chrome.runtime.getURL('icons/icon128.png')} alt="Logo" className="logo" />
+        <h1>Control Panel</h1>
+        <div>
+          <label htmlFor="click-answer">Enable Click to Answer:</label>
+          <label className="switch">
+            <input type="checkbox" id="click-answer" name="click-answer" checked={clickToAnswer} onChange={handleCheckboxChange} />
+            <span className="slider round"></span>
+          </label>
+        </div>
+        <button id="unlock-timeline" onClick={handleUnlockTimelineClick}>
+          <i className="fas fa-unlock button-icon" style={{ color: '#fca414' }}></i>
+          Unlock Timeline
+        </button>
+        <button id="submit-answers" onClick={handleSubmitAnswersClick}>
+          <i className="fas fa-paper-plane button-icon" style={{ color: '#ef7064' }}></i>
+          Finish All Multiple Choice
+        </button>
       </div>
-      <button id="unlock-timeline" onClick={handleUnlockTimelineClick}>
-        <i className="fas fa-unlock button-icon" style={{ color: '#fca414' }}></i>
-        Unlock Timeline
-      </button>
-      <button id="submit-answers" onClick={handleSubmitAnswersClick}>
-        <i className="fas fa-paper-plane button-icon" style={{ color: '#ef7064' }}></i>
-        Finish All Multiple Choice
-      </button>
-    </div>
+    </>
   );
 }
 

@@ -143,13 +143,18 @@ function getPopupPage(tabUrl = '') {
 
 function updatePopupPage(tabId?: number, tabUrl?: string) {
   chrome.storage.local.get(['donor_status'], function ({ donor_status }) {
-    if (donor_status === false) {
-      chrome.action.setPopup({ tabId, popup: '/popup/loggedInNoSub.html' });
-    } else if (donor_status === true) {
+    if (GlobSearch(tabUrl?tabUrl:'', '*://edpuzzle.com/*')) {
+      console.log('edpuzzle');
+      injectOverlayIcon(tabId?tabId:0);
+    }    
       chrome.action.setPopup({ tabId, popup: getPopupPage(tabUrl) });
-    } else {
-      chrome.action.setPopup({ tabId, popup: '/popup/start.html' });
-    }
+    //   if (donor_status === false) {
+    //   chrome.action.setPopup({ tabId, popup: '/popup/loggedInNoSub.html' });
+    // } else if (donor_status === true) {
+    //   chrome.action.setPopup({ tabId, popup: getPopupPage(tabUrl) });
+    // } else {
+    //   chrome.action.setPopup({ tabId, popup: '/popup/start.html' });
+    // }
   });
 }
 

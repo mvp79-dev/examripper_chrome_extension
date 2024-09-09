@@ -13,7 +13,7 @@ overlayWindow.style.cssText = `
     right: 0;
     width: 400px;
     height: 100%;
-    background-color: white;
+    background-color: gray;
     z-index: 10000;
     overflow-y: auto;
     transition: transform 0.3s ease-in-out;
@@ -45,7 +45,7 @@ toggleButton.style.cssText = `
 // Create an image element for the logo
 const logoImage = document.createElement('img');
 logoImage.src = chrome.runtime.getURL('icons/icon128.png'); // Adjust the path as needed
-logoImage.alt = 'Auto Typer';
+// logoImage.alt = 'Auto Typer';
 logoImage.style.cssText = `
     width: 100%;
     height: 100%;
@@ -61,6 +61,7 @@ chrome.storage.local.get(['donor_status'], function({ donor_status }) {
     }
     else {
         console.log('User is not a donor');
+        document.body.appendChild(toggleButton);
     }
 });
 
